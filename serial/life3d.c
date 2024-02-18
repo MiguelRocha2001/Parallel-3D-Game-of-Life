@@ -2,7 +2,12 @@
 #include <stdio.h>
 #include "world_gen.c"
 
-char ***grid;
+void deleteGrid(char ***grid, int N){
+    for (int x = 0; x < N; x++){
+        free(grid[x]);
+    }
+    free(grid);
+}
 
 void showCube(char ***grid, int n) 
 {
@@ -65,7 +70,7 @@ int get_next_z(int z, int n)
 
 
 // TODO: we consider that the sides wrap-around, i.e., cells with indices i and i + N are the same)
-int check_eight(int n, int x, int y, int z)
+int check_eight(char ***grid, int n, int x, int y, int z)
 {
     int count = 0;
 
@@ -90,7 +95,7 @@ int check_eight(int n, int x, int y, int z)
     return count;
 }
 
-int check_under_nine(int n, int x, int y, int z)
+int check_under_nine(char ***grid, int n, int x, int y, int z)
 {
     int count = 0;
     
@@ -121,7 +126,7 @@ int check_under_nine(int n, int x, int y, int z)
 /**
  * Iterates and evaluates all grid cells 
 */
-int check_upper_nine(int n, int x, int y, int z)
+int check_upper_nine(char ***grid, int n, int x, int y, int z)
 {
     int count = 0;
 
@@ -152,19 +157,19 @@ int check_upper_nine(int n, int x, int y, int z)
  * Evaluates a single cell.
  * @return 1 if the cell should live or 0 otherwise
 */
-int evaluate_cell(int n, int x, int y, int z)
+int evaluate_cell(char ***grid, int n, int x, int y, int z)
 {
     int count = 0;
     int is_alive = grid[x][y][z];
     
     //printf("Before check_under_nine function\n");
-    count += check_under_nine(n, x, y, z);
+    count += check_under_nine(grid, n, x, y, z);
 
     //printf("Before check_eight function\n");
-    count += check_eight(n, x, y, z);
+    count += check_eight(grid, n, x, y, z);
 
     //printf("Before check_upper_nine function\n");
-    count += check_upper_nine(n, x, y, z);
+    count += check_upper_nine(grid, n, x, y, z);
 
     return should_live(is_alive, count);
 }
@@ -172,7 +177,7 @@ int evaluate_cell(int n, int x, int y, int z)
 /**
  * Changes grid cells based on @var new_cells_state.
 */
-void apply_grid_updates(int n, int new_cells_state[n][n][n])
+void apply_grid_updates(char *** grid, int n, int new_cells_state[n][n][n])
 {
     // iterate through all blocks
     for (int x = 0; x < n; x++)
@@ -187,7 +192,7 @@ void apply_grid_updates(int n, int new_cells_state[n][n][n])
     }
 }
 
-void simulate(int n)
+void simulate(char ***grid, int n)
 {
     int new_cells_state[n][n][n];
 
@@ -198,36 +203,52 @@ void simulate(int n)
         {
             for(int z = 0; z < n; z++)
             {
-                new_cells_state[x][y][z] = evaluate_cell(n, x, y, z);
+                new_cells_state[x][y][z] = evaluate_cell(grid, n, x, y, z);
             }
         }
     }
 
-    apply_grid_updates(n, new_cells_state);
+    apply_grid_updates(grid, n, new_cells_state);
 }
 
 /**
  * Iterates and evaluates all grid cells 
 */
-void simulation(int nGen, int n)
+void simulation(char *** grid, int nGen, int n, int debug)
 {
     for (int cur_gen = 0; cur_gen < nGen; cur_gen++)
     {
-        printf("Generation %d --------------\n", cur_gen);
-        showCube(grid, n);
-        simulate(n);
+        if (debug){ 
+            printf("Generation %d --------------\n", cur_gen);
+            showCube(grid, n);
+        }
+        simulate(grid, n);
     }
-    printf("Generation %d --------------\n", nGen);
-    showCube(grid, n);
+    if (debug){
+        printf("Generation %d --------------\n", nGen);
+        showCube(grid, n);
+    }
 }
 
 int main(int argc, char *argv[]) 
 {
     int nGen, N, seed;
-    float density; 
-    
+    float density;
+    char ***grid;
     
     double exec_time;
+
+    // Check if argv has the correct size and if it's in debug mode
+    int debug = 0;
+    if (argc < 5 || argc > 6){
+        printf("Incorrect number of arguments\n");
+        return 1;
+    }
+    // In case of 6 arguments, assumes debug mode
+    else if(argc == 6){
+        printf("Debug mode enabled\n");
+        debug = 1;
+    }
 
     nGen = atoi(argv[1]);
     N =  atoi(argv[2]);
@@ -237,10 +258,13 @@ int main(int argc, char *argv[])
     grid = gen_initial_grid(N, density, seed);
     
     exec_time = -omp_get_wtime();
-    simulation(nGen, N);
+
+    simulation(grid, nGen, N, debug);
 
     exec_time += omp_get_wtime();
     fprintf(stderr, "%.1fs\n", exec_time);
+    deleteGrid(grid, N);
+
     //print_result(); // to the stdout!
 
     return 0;
