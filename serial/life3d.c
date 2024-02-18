@@ -33,23 +33,59 @@ int should_live(int is_alive, int live_neigbours)
     if (!is_alive && live_neigbours >= 7 && live_neigbours <= 10) { return 1; }
 }
 
+int get_prev_x(int x, int n)
+{
+    return (x + n - 1) % n;
+}
+
+int get_next_x(int x, int n)
+{
+    return (x + n + 1) % n;
+}
+
+int get_prev_y(int y, int n)
+{
+    return (y + n - 1) % n;
+}
+
+int get_next_y(int y, int n)
+{
+    return (y + n + 1) % n;
+}
+
+int get_prev_z(int z, int n)
+{
+    return (z + n - 1) % n;
+}
+
+int get_next_z(int z, int n)
+{
+    return (z + n + 1) % n;
+}
+
 
 // TODO: we consider that the sides wrap-around, i.e., cells with indices i and i + N are the same)
 int check_eight(int n, int x, int y, int z)
 {
     int count = 0;
 
-    if (grid[x][y-1][z-1]) { count += 1; }
-    if (grid[x][y-1][z]) { count += 1; }
-    if (grid[x][y-1][z+1]) { count += 1; }
+    int prev_y = get_prev_y(y, n);
+    int next_y = get_next_y(y, n);
 
-    if (grid[x][y][z-1]) { count += 1; }
+    int prev_z = get_prev_z(z, n);
+    int next_z = get_next_z(z, n);
+
+    if (grid[x][prev_y][prev_z]) { count += 1; }
+    if (grid[x][prev_y][z]) { count += 1; }
+    if (grid[x][prev_y][next_z]) { count += 1; }
+
+    if (grid[x][y][prev_z]) { count += 1; }
     if (grid[x][y][z]) { count += 1; }
-    if (grid[x][y][z+1]) { count += 1; }
+    if (grid[x][y][next_z]) { count += 1; }
 
-    if (grid[x][y+1][z-1]) { count += 1; }
-    if (grid[x][y+1][z]) { count += 1; }
-    if (grid[x][y+1][z+1]) { count += 1; }
+    if (grid[x][next_y][prev_z]) { count += 1; }
+    if (grid[x][next_y][z]) { count += 1; }
+    if (grid[x][next_y][next_z]) { count += 1; }
 
     return count;
 }
@@ -57,18 +93,27 @@ int check_eight(int n, int x, int y, int z)
 int check_under_nine(int n, int x, int y, int z)
 {
     int count = 0;
+    
+    int prev_x = get_prev_x(x, n);
 
-    if (grid[x-1][y-1][z-1]) { count += 1; }
-    if (grid[x-1][y-1][z]) { count += 1; }
-    if (grid[x-1][y-1][z+1]) { count += 1; }
+    int prev_y = get_prev_y(y, n);
+    int next_y = get_next_y(y, n);
 
-    if (grid[x-1][y][z-1]) { count += 1; }
-    if (grid[x-1][y][z]) { count += 1; }
-    if (grid[x-1][y][z+1]) { count += 1; }
+    int prev_z = get_prev_z(z, n);
+    int next_z = get_next_z(z, n);
 
-    if (grid[x-1][y+1][z-1]) { count += 1; }
-    if (grid[x-1][y+1][z]) { count += 1; }
-    if (grid[x-1][y+1][z+1]) { count += 1; }
+    if (x == 0)
+    if (grid[prev_x][prev_y][prev_z]) { count += 1; }
+    if (grid[prev_x][prev_y][z]) { count += 1; }
+    if (grid[prev_x][prev_y][next_z]) { count += 1; }
+
+    if (grid[prev_x][y][prev_z]) { count += 1; }
+    if (grid[prev_x][y][z]) { count += 1; }
+    if (grid[prev_x][y][next_z]) { count += 1; }
+
+    if (grid[prev_x][next_y][prev_z]) { count += 1; }
+    if (grid[prev_x][next_y][z]) { count += 1; }
+    if (grid[prev_x][next_y][next_z]) { count += 1; }
 
     return count;
 }
@@ -80,17 +125,25 @@ int check_upper_nine(int n, int x, int y, int z)
 {
     int count = 0;
 
-    if (grid[x+1][y-1][z-1]) { count += 1; }
-    if (grid[x+1][y-1][z]) { count += 1; }
-    if (grid[x+1][y-1][z+1]) { count += 1; }
+    int next_x = get_next_x(x, n);
 
-    if (grid[x+1][y][z-1]) { count += 1; }
-    if (grid[x+1][y][z]) { count += 1; }
-    if (grid[x+1][y][z+1]) { count += 1; }
+    int prev_y = get_prev_y(y, n);
+    int next_y = get_next_y(y, n);
 
-    if (grid[x+1][y+1][z-1]) { count += 1; }
-    if (grid[x+1][y+1][z]) { count += 1; }
-    if (grid[x+1][y+1][z+1]) { count += 1; }
+    int prev_z = get_prev_z(z, n);
+    int next_z = get_next_z(z, n);
+
+    if (grid[next_x][prev_y][prev_z]) { count += 1; }
+    if (grid[next_x][prev_y][z]) { count += 1; }
+    if (grid[next_x][prev_y][next_z]) { count += 1; }
+
+    if (grid[next_x][y][prev_z]) { count += 1; }
+    if (grid[next_x][y][z]) { count += 1; }
+    if (grid[next_x][y][next_z]) { count += 1; }
+
+    if (grid[next_x][next_y][prev_z]) { count += 1; }
+    if (grid[next_x][next_y][z]) { count += 1; }
+    if (grid[next_x][next_y][next_z]) { count += 1; }
 
     return count;
 }
@@ -104,8 +157,13 @@ int evaluate_cell(int n, int x, int y, int z)
     int count = 0;
     int is_alive = grid[x][y][z];
     
+    //printf("Before check_under_nine function\n");
     count += check_under_nine(n, x, y, z);
+
+    //printf("Before check_eight function\n");
     count += check_eight(n, x, y, z);
+
+    //printf("Before check_upper_nine function\n");
     count += check_upper_nine(n, x, y, z);
 
     return should_live(is_alive, count);
@@ -129,10 +187,7 @@ void apply_grid_updates(int n, int new_cells_state[n][n][n])
     }
 }
 
-/**
- * Iterates and evaluates all grid cells 
-*/
-void simulation(int n)
+void simulate(int n)
 {
     int new_cells_state[n][n][n];
 
@@ -151,6 +206,21 @@ void simulation(int n)
     apply_grid_updates(n, new_cells_state);
 }
 
+/**
+ * Iterates and evaluates all grid cells 
+*/
+void simulation(int nGen, int n)
+{
+    for (int cur_gen = 0; cur_gen < nGen; cur_gen++)
+    {
+        printf("Generation %d --------------\n", cur_gen);
+        showCube(grid, n);
+        simulate(n);
+    }
+    printf("Generation %d --------------\n", nGen);
+    showCube(grid, n);
+}
+
 int main(int argc, char *argv[]) 
 {
     int nGen, N, seed;
@@ -166,10 +236,8 @@ int main(int argc, char *argv[])
 
     grid = gen_initial_grid(N, density, seed);
     
-    showCube(grid, N);
-    
     exec_time = -omp_get_wtime();
-    simulation(N);
+    simulation(nGen, N);
 
     exec_time += omp_get_wtime();
     fprintf(stderr, "%.1fs\n", exec_time);
