@@ -32,41 +32,27 @@ void showCube(char ***grid, int n)
 */
 int should_live(int is_alive, int live_neigbours)
 {
-    if (is_alive && live_neigbours <= 4) { return 0; }
-    if (is_alive && live_neigbours <= 13) { return 1; }
-    if (is_alive && live_neigbours >= 13) { return 0; }
-    if (!is_alive && live_neigbours >= 7 && live_neigbours <= 10) { return 1; }
+    if
+    (
+        (is_alive && live_neigbours >= 5 && live_neigbours <= 13)
+        ||
+        (!is_alive && live_neigbours >= 7 && live_neigbours <= 10) 
+    ) 
+    { return 1; } // lives
+    
+    return 0; // dies
 }
 
-int get_prev_x(int x, int n)
+int get_prev_coord(int coord, int n)
 {
-    return (x + n - 1) % n;
+    return (coord + n - 1) % n;
 }
 
-int get_next_x(int x, int n)
+int get_next_coord(int coord, int n)
 {
-    return (x + n + 1) % n;
+    return (coord + n + 1) % n;
 }
 
-int get_prev_y(int y, int n)
-{
-    return (y + n - 1) % n;
-}
-
-int get_next_y(int y, int n)
-{
-    return (y + n + 1) % n;
-}
-
-int get_prev_z(int z, int n)
-{
-    return (z + n - 1) % n;
-}
-
-int get_next_z(int z, int n)
-{
-    return (z + n + 1) % n;
-}
 
 /**
  * Iterates and evaluates all grid cells 
@@ -75,13 +61,13 @@ int check_upper_nine(char ***grid, int n, int x, int y, int z)
 {
     int count = 0;
 
-    int next_x = get_next_x(x, n);
+    int next_x = get_next_coord(x, n);
 
-    int prev_y = get_prev_y(y, n);
-    int next_y = get_next_y(y, n);
+    int prev_y = get_prev_coord(y, n);
+    int next_y = get_next_coord(y, n);
 
-    int prev_z = get_prev_z(z, n);
-    int next_z = get_next_z(z, n);
+    int prev_z = get_prev_coord(z, n);
+    int next_z = get_next_coord(z, n);
 
     if (grid[next_x][prev_y][prev_z]) { count += 1; }
     if (grid[next_x][prev_y][z]) { count += 1; }
@@ -102,18 +88,18 @@ int check_eight(char ***grid, int n, int x, int y, int z)
 {
     int count = 0;
 
-    int prev_y = get_prev_y(y, n);
-    int next_y = get_next_y(y, n);
+    int prev_y = get_prev_coord(y, n);
+    int next_y = get_next_coord(y, n);
 
-    int prev_z = get_prev_z(z, n);
-    int next_z = get_next_z(z, n);
+    int prev_z = get_prev_coord(z, n);
+    int next_z = get_next_coord(z, n);
 
     if (grid[x][prev_y][prev_z]) { count += 1; }
     if (grid[x][prev_y][z]) { count += 1; }
     if (grid[x][prev_y][next_z]) { count += 1; }
 
     if (grid[x][y][prev_z]) { count += 1; }
-    if (grid[x][y][z]) { count += 1; }
+    //if (grid[x][y][z]) { count += 1; } current cell should not be evaluated
     if (grid[x][y][next_z]) { count += 1; }
 
     if (grid[x][next_y][prev_z]) { count += 1; }
@@ -127,13 +113,13 @@ int check_under_nine(char ***grid, int n, int x, int y, int z)
 {
     int count = 0;
     
-    int prev_x = get_prev_x(x, n);
+    int prev_x = get_prev_coord(x, n);
 
-    int prev_y = get_prev_y(y, n);
-    int next_y = get_next_y(y, n);
+    int prev_y = get_prev_coord(y, n);
+    int next_y = get_next_coord(y, n);
 
-    int prev_z = get_prev_z(z, n);
-    int next_z = get_next_z(z, n);
+    int prev_z = get_prev_coord(z, n);
+    int next_z = get_next_coord(z, n);
 
     if (grid[prev_x][prev_y][prev_z]) { count += 1; }
     if (grid[prev_x][prev_y][z]) { count += 1; }
@@ -157,14 +143,14 @@ int get_neigbours_most_common_specie(char ***grid, int n, int x, int y, int z)
 {
     int species[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-    int prev_x = get_prev_x(x, n);
-    int next_x = get_next_x(x, n);
+    int prev_x = get_prev_coord(x, n);
+    int next_x = get_next_coord(x, n);
 
-    int prev_y = get_prev_y(y, n);
-    int next_y = get_next_y(y, n);
+    int prev_y = get_prev_coord(y, n);
+    int next_y = get_next_coord(y, n);
 
-    int prev_z = get_prev_z(z, n);
-    int next_z = get_next_z(z, n);
+    int prev_z = get_prev_coord(z, n);
+    int next_z = get_next_coord(z, n);
 
     // checks upper nine
     if (grid[next_x][prev_y][prev_z]) { species[grid[next_x][prev_y][prev_z]] += 1; }
@@ -249,9 +235,9 @@ int evaluate_cell(char ***grid, int n, int x, int y, int z)
 {
     int is_alive = grid[x][y][z];
     
-    int count = get_total_neighbours(grid, n, x, y, z);
+    int neighbours = get_total_neighbours(grid, n, x, y, z);
 
-    if (should_live(is_alive, count))
+    if (should_live(is_alive, neighbours))
     {
         if (!is_alive)
         {
