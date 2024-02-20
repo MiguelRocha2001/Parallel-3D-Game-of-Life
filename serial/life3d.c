@@ -58,57 +58,36 @@ int get_next_coord(int coord, int n)
 */
 void get_neighbours(char ***grid, int n, int x, int y, int z, int* result)
 {
-    int species[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; // idx=0 is specie 1
+    int species[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; // idx=0 => specie 1
     int count = 0;
 
     int prev_x = get_prev_coord(x, n);
-    int next_x = get_next_coord(x, n);
 
     int prev_y = get_prev_coord(y, n);
-    int next_y = get_next_coord(y, n);
 
     int prev_z = get_prev_coord(z, n);
-    int next_z = get_next_coord(z, n);
 
-    // checks upper nine
-    if (grid[next_x][prev_y][prev_z]) { species[grid[next_x][prev_y][prev_z]-1] += 1; count += 1; }
-    if (grid[next_x][prev_y][z]) { species[grid[next_x][prev_y][z]-1] += 1; count += 1; }
-    if (grid[next_x][prev_y][next_z]) { species[grid[next_x][prev_y][next_z]-1] += 1; count += 1; }
-
-    if (grid[next_x][y][prev_z]) { species[grid[next_x][y][prev_z]-1] += 1; count += 1; }
-    if (grid[next_x][y][z]) { species[grid[next_x][y][z]-1] += 1; count += 1; }
-    if (grid[next_x][y][next_z]) { species[grid[next_x][y][next_z]-1] += 1; count += 1; }
-
-    if (grid[next_x][next_y][prev_z]) { species[grid[next_x][next_y][prev_z]-1] += 1; count += 1; }
-    if (grid[next_x][next_y][z]) { species[grid[next_x][next_z][z]-1] += 1; count += 1; }
-    if (grid[next_x][next_y][next_z]) { species[grid[next_x][next_y][next_z]-1] += 1; count += 1; }
-
-
-    // checks middle eight
-    if (grid[x][prev_y][prev_z]) { species[grid[x][prev_y][prev_z]-1] += 1; count += 1; }
-    if (grid[x][prev_y][z]) { species[grid[x][prev_y][z]-1] += 1; count += 1; }
-    if (grid[x][prev_y][next_z]) { species[grid[x][prev_y][next_z]-1] += 1; count += 1; }
-
-    if (grid[x][y][prev_z]) { species[grid[x][y][prev_z]-1] += 1; count += 1; }
-    if (grid[x][y][next_z]) { species[grid[x][y][next_z]-1] += 1; count += 1; }
-
-    if (grid[x][next_y][prev_z]) { species[grid[x][next_y][prev_z]-1] += 1; count += 1; }
-    if (grid[x][next_y][z]) { species[grid[x][next_y][z]-1] += 1; count += 1; }
-    if (grid[x][next_y][next_z]) { species[grid[x][next_y][next_z]-1] += 1; count += 1; }
-
-
-    // checks under nine
-    if (grid[prev_x][prev_y][prev_z]) { species[grid[prev_x][prev_y][prev_z]-1] += 1; count += 1; }
-    if (grid[prev_x][prev_y][z]) { species[grid[prev_x][prev_y][z]-1] += 1; count += 1; }
-    if (grid[prev_x][prev_y][next_z]) { species[grid[prev_x][prev_y][next_z]-1] += 1; count += 1; }
-
-    if (grid[prev_x][y][prev_z]) { species[grid[prev_x][y][prev_z]-1] += 1; count += 1; }
-    if (grid[prev_x][y][z]) { species[grid[prev_x][y][z]-1] += 1; count += 1; }
-    if (grid[prev_x][y][next_z]) { species[grid[prev_x][y][next_z]-1] += 1; count += 1; }
-
-    if (grid[prev_x][next_y][prev_z]) { species[grid[prev_x][next_y][prev_z]-1] += 1; count += 1; }
-    if (grid[prev_x][next_y][z]) { species[grid[prev_x][next_y][z]-1] += 1; count += 1; }
-    if (grid[prev_x][next_y][next_z]) { species[grid[prev_x][next_y][next_z]-1] += 1; count += 1; }
+    // iterate over neighbours
+    for (int xIdx = prev_x, a = 0; a < 3; a++)
+    {
+        for (int yIdx = prev_y, b = 0; b < 3; b++)
+        {
+            for (int zIdx = prev_z, c = 0; c < 3; c++)
+            {
+                if (!(xIdx == x && yIdx == y && zIdx == z)) // dont count self
+                {
+                    if (grid[xIdx][yIdx][zIdx]) // neighbour found
+                    {
+                        species[grid[xIdx][yIdx][zIdx]-1] += 1; 
+                        count += 1;
+                    }
+                }
+                if (++zIdx == n) { zIdx = 0; }
+            }
+            if (++yIdx == n) { yIdx = 0; }
+        }
+        if (++xIdx == n) { xIdx = 0; }
+    }
 
     result[0] = count; // assigns the number of neighbours
 
