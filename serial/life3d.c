@@ -156,7 +156,11 @@ void apply_grid_updates(char *** grid, int n, int new_cells_state[n][n][n])
     }
 }
 
-void simulate(char ***grid, int n, int* specie_counter)
+/**
+ * Counts the number of species of the current grid and then simulates
+ * a new generation and updates the grid.
+*/
+void count_species_and_simulate(char ***grid, int n, int* specie_counter)
 {
     int new_cells_state[n][n][n];
 
@@ -177,6 +181,41 @@ void simulate(char ***grid, int n, int* specie_counter)
     }
 
     apply_grid_updates(grid, n, new_cells_state);
+}
+
+void count_species(char ***grid, int n, int* specie_counter)
+{
+    // iterate through all cells
+    for (int x = 0; x < n; x++)
+    {
+        for(int y = 0; y < n; y++)
+        {
+            for(int z = 0; z < n; z++)
+            {
+                if (grid[x][y][z]) // if the cell is alive
+                {
+                    specie_counter[grid[x][y][z] - 1] += 1;
+                }
+            }
+        }
+    }
+}
+
+void update_specie_counter(
+    int specie_counter[N_SPECIES], 
+    int specie_counter_iter[N_SPECIES],
+    int specie_counter_aux[N_SPECIES],
+    int cur_gen
+)
+{
+    for (int u = 0; u < N_SPECIES; u++)
+    {
+        if (specie_counter_aux[u] > specie_counter[u])
+        {
+            specie_counter[u] = specie_counter_aux[u];
+            specie_counter_iter[u] = cur_gen;
+        }
+    }
 }
 
 /**
@@ -205,23 +244,34 @@ int **simulation(char *** grid, int nGen, int n, int debug)
 
     for (int cur_gen = 0; cur_gen < nGen; cur_gen++)
     {
+        int specie_counter_aux[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
         if (debug){ 
             printf("Generation %d --------------\n", cur_gen);
             showCube(grid, n);
         }
         
-        int specie_counter_aux[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-        simulate(grid, n, specie_counter_aux);
+        count_species_and_simulate(grid, n, specie_counter_aux);
 
-        for (int u = 0; u < N_SPECIES; u++)
-        {
-            if (specie_counter_aux[u] > specie_counter[u])
-            {
-                specie_counter[u] = specie_counter_aux[u];
-                specie_counter_iter[u] = cur_gen + 1;
-            }
-        }
+        update_specie_counter(specie_counter, specie_counter_iter, specie_counter_aux, cur_gen);
     }
+
+    int specie_counter_aux[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    count_species(grid, n, specie_counter_aux);
+    update_specie_counter(specie_counter, specie_counter_iter, specie_counter_aux, n);
+
+    /*
+    printf("\n\n");
+    for (int i = 0; i < 9; i++)
+    {
+        printf("%d ", specie_counter[i]);
+    }
+    printf("\n");
+    for (int i = 0; i < 9; i++)
+    {
+        printf("%d ", specie_counter_iter[i]);
+    }
+    printf("\n\n");
+    */
     
     int **result;
     result = (int **) malloc (N_SPECIES * sizeof(int *));
@@ -230,6 +280,7 @@ int **simulation(char *** grid, int nGen, int n, int debug)
         result[i][0] = specie_counter[i];
         result[i][1] = specie_counter_iter[i];     
     }
+    
 
     if (debug){
         printf("Generation %d --------------\n", nGen);
