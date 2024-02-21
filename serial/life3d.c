@@ -182,13 +182,26 @@ void simulate(char ***grid, int n, int* specie_counter)
 /**
  * Iterates and evaluates all grid cells 
 */
-void simulation(char *** grid, int nGen, int n, int debug)
+int **simulation(char *** grid, int nGen, int n, int debug)
 {
     // used to count the number of each specie before new generation
     // idx == 0 means specie 1
-    int specie_counter[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
-    int specie_counter_aux[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
-    int specie_counter_iter[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1}; // olds the iteration 
+    int specie_counter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int specie_counter_iter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; // Holds the iteration 
+
+    for (int x = 0; x < n; x++)
+    {
+        for(int y = 0; y < n; y++)
+        {
+            for(int z = 0; z < n; z++)
+            {
+                if (grid[x][y][z]) // if the cell is alive
+                {
+                    specie_counter[grid[x][y][z] - 1] += 1;
+                }
+            }
+        }
+    }
 
     for (int cur_gen = 0; cur_gen < nGen; cur_gen++)
     {
@@ -197,20 +210,37 @@ void simulation(char *** grid, int nGen, int n, int debug)
             showCube(grid, n);
         }
         
+        int specie_counter_aux[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
         simulate(grid, n, specie_counter_aux);
 
-        for (int u = 0; u < 9; u++)
+        for (int u = 0; u < N_SPECIES; u++)
         {
             if (specie_counter_aux[u] > specie_counter[u])
             {
                 specie_counter[u] = specie_counter_aux[u];
-                specie_counter_iter[u] = cur_gen;
+                specie_counter_iter[u] = cur_gen + 1;
             }
         }
     }
+    
+    int **result;
+    result = (int **) malloc (N_SPECIES * sizeof(int *));
+    for (int i = 0; i < N_SPECIES; i++){
+        result[i] = (int *) malloc (2 * sizeof(int));
+        result[i][0] = specie_counter[i];
+        result[i][1] = specie_counter_iter[i];     
+    }
+
     if (debug){
         printf("Generation %d --------------\n", nGen);
         showCube(grid, n);
+    }
+    return result;
+}
+
+void print_result(int **result){
+    for (int i = 0; i < N_SPECIES; i++){
+        printf("%d %d %d\n", i + 1, result[i][0], result[i][1]);
     }
 }
 
@@ -240,16 +270,22 @@ int main(int argc, char *argv[])
     seed =  atoi(argv[4]);
 
     grid = gen_initial_grid(N, density, seed);
+
+    int **result;
+    result = (int **) malloc (N_SPECIES * sizeof(int *));
+    for (int i = 0; i < N_SPECIES; i++){
+        result[i] = (int *) malloc (2 * sizeof(int));
+    }
     
     exec_time = -omp_get_wtime();
 
-    simulation(grid, nGen, N, debug);
+    result = simulation(grid, nGen, N, debug);
 
     exec_time += omp_get_wtime();
     fprintf(stderr, "%.1fs\n", exec_time);
     deleteGrid(grid, N);
 
-    //print_result(); // to the stdout!
+    print_result(result); // to the stdout!
 
     return 0;
 }
