@@ -94,11 +94,11 @@ void get_neighbours(char ***grid, int n, int x, int y, int z, int* result)
     if (count != 0)
     {
         // checks the most common neighbour
-        int idx = 0;
-        for (int u = 1, max = -1; u < 9; u++)
+        int idx = -1;
+        for (int u = 0, max = -1; u < 9; u++)
         {
             if (species[u] > max) 
-            { 
+            {
                 idx = u;
                 max = species[u];
             }
