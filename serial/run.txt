@@ -1,1 +1,19 @@
-./life3d.o 4 4 .4 100 d
+For debug:
+    $ ./life3d.o 4 4 .4 100 d
+
+For tests:
+    $ ./life3d.o 1000 64 0.4 0
+    $ ./life3d.o 200 128 .5 1000
+    $ ./life3d.o 10 512 .4 0
+    $ ./life3d.o 3 1024 .4 100
+
+Best times (in order of the above tests):
+    - 60.3s
+    - 98.1s
+    - 356.0s
+    - 968.9s
+
+Debug with gdb:
+    $ gdb life3d.o
+    $ set args 200 128 .5 1000
+    $ run

@@ -138,7 +138,7 @@ int evaluate_cell(char ***grid, int n, int x, int y, int z)
 /**
  * Changes grid cells based on @var new_cells_state.
 */
-void apply_grid_updates(char *** grid, int n, int new_cells_state[n][n][n])
+void apply_grid_updates(char *** grid, int n, int ***new_cells_state)
 {
     // iterate through all cells
     for (int x = 0; x < n; x++)
@@ -160,10 +160,8 @@ void apply_grid_updates(char *** grid, int n, int new_cells_state[n][n][n])
  * Counts the number of species of the current grid and then simulates
  * a new generation and updates the grid.
 */
-void count_species_and_simulate(char ***grid, int n, int* specie_counter)
+void count_species_and_simulate(char ***grid, int n, int* specie_counter, int ***new_cells_state)
 {
-    int new_cells_state[n][n][n];
-
     // iterate through all cells
     for (int x = 0; x < n; x++)
     {
@@ -218,6 +216,44 @@ void update_specie_counter(
     }
 }
 
+int*** allocate_3d_array(int n) {
+    int *** array = (int ***)malloc(n * sizeof(int **));
+    if (array == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(1);
+    }
+
+    for (int i = 0; i < n; i++) {
+        (array)[i] = (int **)malloc(n * sizeof(int *));
+        if ((array)[i] == NULL) {
+            fprintf(stderr, "Memory allocation failed\n");
+            exit(1);
+        }
+        for (int j = 0; j < n; j++) {
+            (array)[i][j] = (int *)malloc(n * sizeof(int));
+            if ((array)[i][j] == NULL) {
+                fprintf(stderr, "Memory allocation failed\n");
+                exit(1);
+            }
+        }
+    }
+
+    return array;
+}
+
+
+void free_3d_array(int ***array, int n) {
+    // Free memory for the third dimension
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            free(array[i][j]);
+        }
+        free(array[i]);
+    }
+    // Free memory for the first dimension
+    free(array);
+}
+
 /**
  * Iterates and evaluates all grid cells 
 */
@@ -242,6 +278,8 @@ int **simulation(char *** grid, int nGen, int n, int debug)
         }
     }
 
+    int ***new_cells_state = allocate_3d_array(n);
+
     for (int cur_gen = 0; cur_gen < nGen; cur_gen++)
     {
         int specie_counter_aux[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -250,28 +288,17 @@ int **simulation(char *** grid, int nGen, int n, int debug)
             showCube(grid, n);
         }
         
-        count_species_and_simulate(grid, n, specie_counter_aux);
+        count_species_and_simulate(grid, n, specie_counter_aux, new_cells_state);
 
         update_specie_counter(specie_counter, specie_counter_iter, specie_counter_aux, cur_gen);
     }
 
+    free_3d_array(new_cells_state, n);
+
+    // this is because there is still need to count species of last computed generation
     int specie_counter_aux[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
     count_species(grid, n, specie_counter_aux);
     update_specie_counter(specie_counter, specie_counter_iter, specie_counter_aux, n);
-
-    /*
-    printf("\n\n");
-    for (int i = 0; i < 9; i++)
-    {
-        printf("%d ", specie_counter[i]);
-    }
-    printf("\n");
-    for (int i = 0; i < 9; i++)
-    {
-        printf("%d ", specie_counter_iter[i]);
-    }
-    printf("\n\n");
-    */
     
     int **result;
     result = (int **) malloc (N_SPECIES * sizeof(int *));
