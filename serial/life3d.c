@@ -1,31 +1,7 @@
 #include <omp.h>
 #include <stdio.h>
 #include "world_gen.c"
-
-void deleteGrid(char ***grid, int N){
-    for (int x = 0; x < N; x++){
-        free(grid[x]);
-    }
-    free(grid);
-}
-
-void showCube(char ***grid, int n) 
-{
-    for (int x = 0; x < n; x++)
-    {
-        printf("Layer %d:\n", x);
-        for(int y = 0; y < n; y++)
-        {
-            for(int z = 0; z < n; z++)
-            {
-                if (grid[x][y][z]) { printf("%d ", grid[x][y][z]); }
-                else { printf("- "); }
-            }
-            printf("\n");
-        }
-        printf("\n");
-    }
-}
+#include "utils.h"
 
 /**
  * @return if the cell should live on to the next generation
@@ -41,16 +17,6 @@ int should_live(int is_alive, int live_neigbours)
     { return 1; } // lives
     
     return 0; // dies
-}
-
-int get_prev_coord(int coord, int n)
-{
-    return (coord + n - 1) % n;
-}
-
-int get_next_coord(int coord, int n)
-{
-    return (coord + n + 1) % n;
 }
 
 /**
@@ -136,27 +102,6 @@ int evaluate_cell(char ***grid, int n, int x, int y, int z)
 }
 
 /**
- * Changes grid cells based on @var new_cells_state.
-*/
-void apply_grid_updates(char *** grid, int n, int ***new_cells_state)
-{
-    // iterate through all cells
-    for (int x = 0; x < n; x++)
-    {
-        for(int y = 0; y < n; y++)
-        {
-            for(int z = 0; z < n; z++)
-            {
-                if (new_cells_state[x][y][z] != -1) // -1 means no change
-                {
-                    grid[x][y][z] = new_cells_state[x][y][z];
-                }
-            }
-        }
-    }
-}
-
-/**
  * Counts the number of species of the current grid and then simulates
  * a new generation and updates the grid.
 */
@@ -199,23 +144,6 @@ void count_species(char ***grid, int n, int* specie_counter)
     }
 }
 
-void update_specie_counter(
-    int specie_counter[N_SPECIES], 
-    int specie_counter_iter[N_SPECIES],
-    int specie_counter_aux[N_SPECIES],
-    int cur_gen
-)
-{
-    for (int u = 0; u < N_SPECIES; u++)
-    {
-        if (specie_counter_aux[u] > specie_counter[u])
-        {
-            specie_counter[u] = specie_counter_aux[u];
-            specie_counter_iter[u] = cur_gen;
-        }
-    }
-}
-
 int*** allocate_3d_array(int n) {
     int *** array = (int ***)malloc(n * sizeof(int **));
     if (array == NULL) {
@@ -239,19 +167,6 @@ int*** allocate_3d_array(int n) {
     }
 
     return array;
-}
-
-
-void free_3d_array(int ***array, int n) {
-    // Free memory for the third dimension
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            free(array[i][j]);
-        }
-        free(array[i]);
-    }
-    // Free memory for the first dimension
-    free(array);
 }
 
 /**
@@ -290,7 +205,7 @@ int **simulation(char *** grid, int nGen, int n, int debug)
         
         count_species_and_simulate(grid, n, specie_counter_aux, new_cells_state);
 
-        update_specie_counter(specie_counter, specie_counter_iter, specie_counter_aux, cur_gen);
+        update_specie_counter(specie_counter, specie_counter_iter, specie_counter_aux, N_SPECIES, cur_gen);
     }
 
     free_3d_array(new_cells_state, n);
@@ -298,7 +213,7 @@ int **simulation(char *** grid, int nGen, int n, int debug)
     // this is because there is still need to count species of last computed generation
     int specie_counter_aux[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
     count_species(grid, n, specie_counter_aux);
-    update_specie_counter(specie_counter, specie_counter_iter, specie_counter_aux, n);
+    update_specie_counter(specie_counter, specie_counter_iter, specie_counter_aux, N_SPECIES, n);
     
     int **result;
     result = (int **) malloc (N_SPECIES * sizeof(int *));
@@ -314,12 +229,6 @@ int **simulation(char *** grid, int nGen, int n, int debug)
         showCube(grid, n);
     }
     return result;
-}
-
-void print_result(int **result){
-    for (int i = 0; i < N_SPECIES; i++){
-        printf("%d %d %d\n", i + 1, result[i][0], result[i][1]);
-    }
 }
 
 int main(int argc, char *argv[]) 
@@ -363,7 +272,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "%.1fs\n", exec_time);
     deleteGrid(grid, N);
 
-    print_result(result); // to the stdout!
+    print_result(result, N_SPECIES); // to the stdout!
 
     return 0;
 }
