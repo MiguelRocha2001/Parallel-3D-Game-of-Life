@@ -202,21 +202,7 @@ int **simulation(char *** grid, int nGen, int n, int debug)
     int specie_counter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
     int specie_counter_iter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; // Holds the iteration 
 
-    // counts species
-    #pragma omp parallel for collapse(3)
-    for (int x = 0; x < n; x++)
-    {
-        for(int y = 0; y < n; y++)
-        {
-            for(int z = 0; z < n; z++)
-            {
-                if (grid[x][y][z]) // if the cell is alive
-                {
-                    specie_counter[grid[x][y][z] - 1] += 1;
-                }
-            }
-        }
-    }
+    count_species(grid, n, specie_counter);
 
     int ***new_cells_state = allocate_3d_array(n);
 
