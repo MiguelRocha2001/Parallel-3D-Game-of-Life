@@ -1,0 +1,8 @@
+Best times (in order of the professor/fenix tests):
+    Serial:
+        - 60.3s
+        - 98.1s
+        - 356.0s
+        - 968.9s
+    OMP:
+        
