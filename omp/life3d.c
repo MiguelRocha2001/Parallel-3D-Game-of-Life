@@ -28,8 +28,15 @@ void get_neighbours(char ***grid, int n, int x, int y, int z, int* result)
     int count = 0;
 
     int prev_x, prev_y, prev_z;
+    
+    ///*
+    prev_x = get_prev_coord(x, n);
+    prev_y = get_prev_coord(y, n);
+    prev_z = get_prev_coord(z, n);
+    //*/
 
-    #pragma omp parallel sections
+    /*
+    #pragma omp parallel sections // TODO: for some reason, this makes execution way slower. Or maybe blocks it.
     {
         #pragma omp section
         prev_x = get_prev_coord(x, n);
@@ -40,6 +47,7 @@ void get_neighbours(char ***grid, int n, int x, int y, int z, int* result)
         #pragma omp section
         prev_z = get_prev_coord(z, n);
     }
+    */
 
     // iterate over neighbours
     for (int xIdx = prev_x, a = 0; a < 3; a++)
@@ -115,7 +123,7 @@ int evaluate_cell(char ***grid, int n, int x, int y, int z)
 void count_species_and_simulate(char ***grid, int n, int* specie_counter, int ***new_cells_state)
 {
     // iterate through all cells
-    #pragma omp parallel for collapse(3)
+    #pragma omp parallel for collapse(3) // TODO: causing an error in the output
     for (int x = 0; x < n; x++)
     {
         for(int y = 0; y < n; y++)
@@ -124,6 +132,7 @@ void count_species_and_simulate(char ***grid, int n, int* specie_counter, int **
             {
                 if (grid[x][y][z]) // if the cell is alive
                 {
+                    #pragma omp critical // this is needed because multiple threads could be acessing some same specie
                     specie_counter[grid[x][y][z] - 1] += 1;
                 }
                 new_cells_state[x][y][z] = evaluate_cell(grid, n, x, y, z);
@@ -137,7 +146,7 @@ void count_species_and_simulate(char ***grid, int n, int* specie_counter, int **
 void count_species(char ***grid, int n, int* specie_counter)
 {
     // iterate through all cells
-    //#pragma omp parallel for collapse(3) TODO: this is causing an error in the output
+    #pragma omp for collapse(3)
     for (int x = 0; x < n; x++)
     {
         for(int y = 0; y < n; y++)
@@ -160,16 +169,18 @@ int*** allocate_3d_array(int n) {
         exit(1);
     }
 
-    #pragma omp paralelize for
-    for (int i = 0; i < n; i++) {
+    #pragma parallel omp for
+    for (int i = 0; i < n; i++) 
+    {
         (array)[i] = (int **)malloc(n * sizeof(int *));
         if ((array)[i] == NULL) {
             fprintf(stderr, "Memory allocation failed\n");
             exit(1);
         }
         
-        #pragma omp paralelize for
-        for (int j = 0; j < n; j++) {
+        #pragma omp for
+        for (int j = 0; j < n; j++) 
+        {
             (array)[i][j] = (int *)malloc(n * sizeof(int));
             if ((array)[i][j] == NULL) {
                 fprintf(stderr, "Memory allocation failed\n");
@@ -234,14 +245,15 @@ int **simulation(char *** grid, int nGen, int n, int debug)
     int **result;
     result = (int **) malloc (N_SPECIES * sizeof(int *));
 
-    #pragma omp for
+    #pragma omp parallel for
     for (int i = 0; i < N_SPECIES; i++){
         result[i] = (int *) malloc (2 * sizeof(int));
         result[i][0] = specie_counter[i];
         result[i][1] = specie_counter_iter[i];     
     }
     
-    if (debug){
+    if (debug)
+    {
         printf("Generation %d --------------\n", nGen);
         showCube(grid, n);
     }
@@ -281,7 +293,7 @@ int main(int argc, char *argv[])
     int **result;
     result = (int **) malloc (N_SPECIES * sizeof(int *));
     
-    #pragma omp parallel for
+    //#pragma omp for
     for (int i = 0; i < N_SPECIES; i++){
         result[i] = (int *) malloc (2 * sizeof(int));
     }

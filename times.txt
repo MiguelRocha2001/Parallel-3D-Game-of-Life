@@ -5,4 +5,7 @@ Best times (in order of the professor/fenix tests):
         - 356.0s
         - 968.9s
     OMP:
-        
+        - 18.8s
+        - 29.1s
+        - 87.4s
+        - 231.2s
