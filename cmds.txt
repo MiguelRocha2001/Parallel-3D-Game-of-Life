@@ -11,3 +11,7 @@ Debug with gdb:
     $ gdb life3d.o
     $ set args 200 128 .5 1000
     $ run
+
+ssh:
+    $ ssh -Y -J ist1110916@cluster.rnl.tecnico.ulisboa.pt ist1110916@lab1p3
+    $ cd $CLUSTER_HOME

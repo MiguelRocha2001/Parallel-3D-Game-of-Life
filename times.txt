@@ -1,11 +1,19 @@
+TODO: run OpenMP with only one thread on the SSH
+
 Best times (in order of the professor/fenix tests):
-    Serial:
+    Serial (laptop): 12 threads
         - 60.3s
         - 98.1s
         - 356.0s
         - 968.9s
-    OMP:
+    OMP (laptop): 12 threads
         - 18.8s
         - 29.1s
         - 87.4s
         - 231.2s
+
+    OMP (benchamark): 8 threads
+        - 16.5s
+        - 27.0s
+        - 99.1s
+        - 256.7s

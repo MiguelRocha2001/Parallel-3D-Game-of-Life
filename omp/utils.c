@@ -67,7 +67,6 @@ void update_specie_counter(
     int cur_gen
 )
 {
-    // TODO: try to paralelize
     for (int u = 0; u < n_species; u++)
     {
         if (specie_counter_aux[u] > specie_counter[u])
@@ -80,8 +79,8 @@ void update_specie_counter(
 
 void free_3d_array(int ***array, int n) {
     // Free memory for the third dimension
+    #pragma omp parallel for
     for (int i = 0; i < n; i++) {
-        #pragma omp parallel for
         for (int j = 0; j < n; j++) {
             free(array[i][j]);
         }

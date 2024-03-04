@@ -35,8 +35,8 @@ void get_neighbours(char ***grid, int n, int x, int y, int z, int* result)
     prev_z = get_prev_coord(z, n);
     //*/
 
-    /*
-    #pragma omp parallel sections // TODO: for some reason, this makes execution way slower. Or maybe blocks it.
+    /* TODO: blocks because the the PC is waiting for resources and there are no resources
+    #pragma omp parallel sections
     {
         #pragma omp section
         prev_x = get_prev_coord(x, n);
@@ -93,7 +93,7 @@ void get_neighbours(char ***grid, int n, int x, int y, int z, int* result)
  * Evaluates a single cell.
  * @return the specie id if it should live and the cell is dead;
  * @return 0 if it should die;
- * @return -1 if it should not change (is alive and should continue living).
+ * @return the same specie id if it should not change (is alive and should continue living).
 */
 int evaluate_cell(char ***grid, int n, int x, int y, int z)
 {
@@ -108,9 +108,10 @@ int evaluate_cell(char ***grid, int n, int x, int y, int z)
         {
             return neighbours[1];
         }
-        else
+        else // should not change
         {
-            return -1;
+            return grid[x][y][z];
+            //return -1;
         }
     }
     else { return 0; }
@@ -122,8 +123,8 @@ int evaluate_cell(char ***grid, int n, int x, int y, int z)
 */
 void count_species_and_simulate(char ***grid, int n, int* specie_counter, int ***new_cells_state)
 {
-    // iterate through all cells
-    #pragma omp parallel for collapse(3) // TODO: causing an error in the output
+    // iterate through all cells and reduces the counter array
+    #pragma omp parallel for reduction(+:specie_counter[:N_SPECIES]) collapse(3) 
     for (int x = 0; x < n; x++)
     {
         for(int y = 0; y < n; y++)
@@ -132,7 +133,6 @@ void count_species_and_simulate(char ***grid, int n, int* specie_counter, int **
             {
                 if (grid[x][y][z]) // if the cell is alive
                 {
-                    #pragma omp critical // this is needed because multiple threads could be acessing some same specie
                     specie_counter[grid[x][y][z] - 1] += 1;
                 }
                 new_cells_state[x][y][z] = evaluate_cell(grid, n, x, y, z);
@@ -140,7 +140,12 @@ void count_species_and_simulate(char ***grid, int n, int* specie_counter, int **
         }
     }
 
-    apply_grid_updates(grid, n, new_cells_state);
+    ///*
+    char ***temp_grid_pointer = grid;
+    grid = new_cells_state;
+    new_cells_state = temp_grid_pointer;
+    //*/
+    //apply_grid_updates(grid, n, new_cells_state);
 }
 
 void count_species(char ***grid, int n, int* specie_counter)
@@ -211,12 +216,12 @@ int **simulation(char *** grid, int nGen, int n, int debug)
         int specie_counter_aux[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
         
         if (debug)
-        { 
+        {
             printf("Generation %d --------------\n", cur_gen);
             showCube(grid, n);
         }
         
-        count_species_and_simulate(grid, n, specie_counter_aux, new_cells_state);
+        count_species_and_simulate(grid, n, specie_counter_aux, new_cells_state); // TODO: "new_cells_state" is unecessary
 
         update_specie_counter(specie_counter, specie_counter_iter, specie_counter_aux, N_SPECIES, cur_gen);
     }
@@ -231,7 +236,6 @@ int **simulation(char *** grid, int nGen, int n, int debug)
     int **result;
     result = (int **) malloc (N_SPECIES * sizeof(int *));
 
-    #pragma omp parallel for
     for (int i = 0; i < N_SPECIES; i++){
         result[i] = (int *) malloc (2 * sizeof(int));
         result[i][0] = specie_counter[i];
@@ -291,6 +295,7 @@ int main(int argc, char *argv[])
     exec_time += omp_get_wtime();
     fprintf(stderr, "%.1fs\n", exec_time);
     deleteGrid(grid, N);
+    //free_3d_array((int***)grid, N); // TODO: for some reason, this doesnt work
 
     print_result(result, N_SPECIES); // to the stdout!
 
