@@ -20,6 +20,7 @@ int should_live(int is_alive, int live_neigbours)
 }
 
 /**
+ * The get_neighbours(), I think that the best justification, not to use any paralelism, is because we do small loops (check neighbours and counting neighbours), which only depend on the number of neighbours, which is always the same. Therefore, there isnt any need to create more threads, and have the overhead of doing so. The only thing we are doing is paralelize the call to this function, since it makes sense.
  * @return the number of neighbours and the most common specie among them
 */
 void get_neighbours(char ***grid, int n, int x, int y, int z, int* result)
@@ -29,25 +30,9 @@ void get_neighbours(char ***grid, int n, int x, int y, int z, int* result)
 
     int prev_x, prev_y, prev_z;
     
-    ///*
     prev_x = get_prev_coord(x, n);
     prev_y = get_prev_coord(y, n);
     prev_z = get_prev_coord(z, n);
-    //*/
-
-    /* TODO: blocks because the the PC is waiting for resources and there are no resources
-    #pragma omp parallel sections
-    {
-        #pragma omp section
-        prev_x = get_prev_coord(x, n);
-
-        #pragma omp section
-        prev_y = get_prev_coord(y, n);
-
-        #pragma omp section
-        prev_z = get_prev_coord(z, n);
-    }
-    */
 
     // iterate over neighbours
     for (int xIdx = prev_x, a = 0; a < 3; a++)
@@ -110,8 +95,8 @@ int evaluate_cell(char ***grid, int n, int x, int y, int z)
         }
         else // should not change
         {
-            return grid[x][y][z];
-            //return -1;
+            //return grid[x][y][z];
+            return -1;
         }
     }
     else { return 0; }
@@ -124,7 +109,7 @@ int evaluate_cell(char ***grid, int n, int x, int y, int z)
 void count_species_and_simulate(char ***grid, int n, int* specie_counter, int ***new_cells_state)
 {
     // iterate through all cells and reduces the counter array
-    #pragma omp parallel for reduction(+:specie_counter[:N_SPECIES]) collapse(3) 
+    #pragma omp parallel for reduction(+:specie_counter[:N_SPECIES]) //collapse(3) 
     for (int x = 0; x < n; x++)
     {
         for(int y = 0; y < n; y++)
@@ -140,18 +125,18 @@ void count_species_and_simulate(char ***grid, int n, int* specie_counter, int **
         }
     }
 
-    ///*
+    /*
     char ***temp_grid_pointer = grid;
     grid = new_cells_state;
     new_cells_state = temp_grid_pointer;
-    //*/
-    //apply_grid_updates(grid, n, new_cells_state);
+    */
+    apply_grid_updates(grid, n, new_cells_state);
 }
 
 void count_species(char ***grid, int n, int* specie_counter)
 {
     // iterate through all cells
-    #pragma omp for collapse(3)
+    #pragma omp for //collapse(3) dont use colapse for the same reason as apply_grid_updates() function
     for (int x = 0; x < n; x++)
     {
         for(int y = 0; y < n; y++)

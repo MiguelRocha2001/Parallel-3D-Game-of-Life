@@ -1,26 +1,16 @@
-Best times (in order of the professor/fenix tests):
-    Serial (laptop): 12 threads
-        - 60.3s
-        - 98.1s
-        - 356.0s
-        - 968.9s
-    OMP (laptop): 12 threads
-        - 18.8s
-        - 29.1s
-        - 87.4s
-        - 231.2s
-
-    OMP (benchamark): 8 threads
-        - 16.5s
-        - 27.0s
-        - 99.1s
-        - 256.7s
-
 Omp:
+    With colapse:
+        Num Threads:
+                8           4           2           1
+        test 1: 8.1         8.9         15.9        30.6
+        test 2: 14.1        14.2        26.7        53.0
+        test 3: 55.5        56.0        104.5       204.9
+        test 4: 146.4       141.8       269.7       518.7
 
-Num Threads:
-        8           4           2           1
-test 1: 8.1         8.9         15.9        30.6
-test 2: 14.1        14.2        26.7        53.0
-test 3: 55.5        56.0        104.5       204.9
-test 4: 146.4       141.8       269.7       518.7
+    Without colapse:
+        Num Threads:
+                8           4           2           1
+        test 1: 8.0         7.9         15.3        30.2
+        test 2: 13.7        13.5        26.3        51.9
+        test 3: 53.6        53.5        103.0       202.5
+        test 4: 139.3       139.6       263.3

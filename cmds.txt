@@ -13,5 +13,6 @@ Debug with gdb:
     $ run
 
 ssh:
-    $ ssh -Y -J ist1110916@cluster.rnl.tecnico.ulisboa.pt ist1110916@lab1p3
+    $ ssh ist1110916@cluster.rnl.tecnico.ulisboa.pt
+    $ ssh lab1p1
     $ cd $CLUSTER_HOME

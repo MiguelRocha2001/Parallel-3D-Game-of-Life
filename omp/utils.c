@@ -40,10 +40,14 @@ int get_next_coord(int coord, int n)
     return (coord + n + 1) % n;
 }
 
+// In here, I think colapsing is bad. Colapsing is usually done to get better load balancing. 
+// But we dont need it. Because all iterations do the same work (should take the same amout of time). 
+//Actually, with colapse, I think we have overhead because the threads will have cache misses, since they wont 
+// access consequtive memory addresses. What do you think?*
 void apply_grid_updates(char *** grid, int n, int ***new_cells_state)
 {
     // iterate through all cells
-    #pragma omp parallel for collapse(3)
+    #pragma omp parallel for //collapse(3)
     for (int x = 0; x < n; x++)
     {
         for(int y = 0; y < n; y++)
