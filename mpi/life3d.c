@@ -253,6 +253,13 @@ int main(int argc, char *argv[])
     grid = gen_initial_grid(N, density, seed, id, p);
 
     /*
+    int rows = N/p + 2;
+    if (id == 3)
+        print_partial_cube(grid, rows, N);
+    */
+    
+
+    /*
     int **result;
     result = (int **) malloc (N_SPECIES * sizeof(int *));
     

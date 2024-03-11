@@ -30,6 +30,24 @@ void showCube(char ***grid, int n)
     }
 }
 
+void print_partial_cube(char *** grid, int rows, int n)
+{
+    for (int x = 0; x < rows; x++)
+    {
+        printf("Layer %d:\n", x);
+        for(int y = 0; y < n; y++)
+        {
+            for(int z = 0; z < n; z++)
+            {
+                if (grid[x][y][z]) { printf("%d ", grid[x][y][z]); }
+                else { printf("- "); }
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }
+}
+
 int get_prev_coord(int coord, int n)
 {
     return (coord + n - 1) % n;

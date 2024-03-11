@@ -21,24 +21,6 @@ float r4_uni()
     return 0.5 + 0.2328306e-09 * (seed_in + (int) seed);
 }
 
-void print_partial_grid(char *** grid, int rows, int n)
-{
-    for (int x = 0; x < rows; x++)
-    {
-        printf("Layer %d:\n", x);
-        for(int y = 0; y < n; y++)
-        {
-            for(int z = 0; z < n; z++)
-            {
-                if (grid[x][y][z]) { printf("%d ", grid[x][y][z]); }
-                else { printf("- "); }
-            }
-            printf("\n");
-        }
-        printf("\n");
-    }
-}
-
 char ***gen_initial_grid(long long N, float density, int input_seed, int id, int p)
 {
     int x, y, z;
@@ -86,38 +68,36 @@ char ***gen_initial_grid(long long N, float density, int input_seed, int id, int
                     
                     if (id != 0 && id != p-1)
                     {
-                        if (x >= start_row && x < start_row + N/p)
+                        if (x >= start_row && x < start_row + rows)
                         grid[x - start_row][y][z] = value;
-                        //printf("Value: %d\n", value);
                     }
                     
                     else if (id == 0)
                     {
                         if (x < rows - 1) 
                         {
-                            //printf("Value: %d\n", value);
                             grid[x+1][y][z] = value;
                         }
 
                         else if (x == N-1) 
                         {
-                            //printf("Value: %d\n", value);
                             grid[0][y][z] = value;
                         }
                     }
                     else if (id == p-1)
                     {
-                        if (x == 0)
-                            grid[0][y][z] = value;
-
-                        if (x >= start_row && x < N)
+                        if (x >= start_row)
                             grid[x - start_row][y][z] = value;
+
+                        else if (x == 0)
+                        {
+                            //printf("Value: %d\n", value);
+                            grid[rows-1][y][z] = value;
+                        }
                     }
                 }
 
     //printf("Process id: %d, end of gen_initial_grid\n", id);
-    if (id == 1)
-        print_partial_grid(grid, rows, N);
 
     return grid;
 }

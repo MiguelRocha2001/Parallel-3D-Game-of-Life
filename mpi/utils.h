@@ -4,6 +4,7 @@
 
 void deleteGrid(char ***grid, int N);
 void showCube(char ***grid, int n);
+void print_partial_cube(char *** grid, int rows, int n);
 int get_prev_coord(int coord, int n);
 int get_next_coord(int coord, int n);
 
