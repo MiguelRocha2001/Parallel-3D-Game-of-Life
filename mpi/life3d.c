@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "world_gen.c"
 #include "utils.h"
+#include <mpi.h>
 
 /**
  * @return if the cell should live on to the next generation
@@ -106,31 +107,20 @@ int evaluate_cell(char ***grid, int n, int x, int y, int z)
  * Counts the number of species of the current grid and then simulates
  * a new generation and updates the grid.
 */
-void count_species_and_simulate(char ***grid, int n, int* specie_counter, int ***new_cells_state)
+void count_species_and_simulate(char ***grid, int n, int start_row, int rows_to_evaluate, int end_row)
 {
     // iterate through all cells and reduces the counter array
-    #pragma omp parallel for reduction(+:specie_counter[:N_SPECIES]) //collapse(3) 
-    for (int x = 0; x < n; x++)
+    //#pragma omp parallel for reduction(+:specie_counter[:N_SPECIES]) //collapse(3) 
+    for (int x = start_row; x < rows_to_evaluate; x++)
     {
         for(int y = 0; y < n; y++)
         {
             for(int z = 0; z < n; z++)
             {
-                if (grid[x][y][z]) // if the cell is alive
-                {
-                    specie_counter[grid[x][y][z] - 1] += 1;
-                }
-                new_cells_state[x][y][z] = evaluate_cell(grid, n, x, y, z);
+                evaluate_cell(grid, n, x, y, z);
             }
         }
     }
-
-    /*
-    char ***temp_grid_pointer = grid;
-    grid = new_cells_state;
-    new_cells_state = temp_grid_pointer;
-    */
-    apply_grid_updates(grid, n, new_cells_state);
 }
 
 void count_species(char ***grid, int n, int* specie_counter)
@@ -187,55 +177,42 @@ int*** allocate_3d_array(int n) {
 */
 int **simulation(char *** grid, int nGen, int n, int debug)
 {
+    MPI_Request request;
+    int id, p;
 
-    
-    // used to count the number of each specie before new generation
-    // idx == 0 means specie 1
-    int specie_counter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-    int specie_counter_iter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; // Holds the iteration 
+    MPI_Comm_size(MPI_COMM_WORLD, &p);
+    MPI_Comm_rank(MPI_COMM_WORLD, &id);
 
-    //count_species(grid, n, specie_counter);
+    char *** partial_grid;
+    int rows_per_node = n/p;
 
-    int ***new_cells_state = allocate_3d_array(n);
-
-    for (int cur_gen = 0; cur_gen < nGen; cur_gen++)
+    if (id == 0) // root node
     {
-        int specie_counter_aux[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-        
-        if (debug)
+        for (int i = 0; i < n; i += n/p)
         {
-            printf("Generation %d --------------\n", cur_gen);
-            showCube(grid, n);
+            MPI_Send(grid[n-1], 100, MPI_DOUBLE, 1, n-1, MPI_COMM_WORLD); // send previous
+            for (int u = i; u < n/p; u++) // send middle ones
+            {
+                MPI_Send(grid[u], 100, MPI_DOUBLE, 1, u, MPI_COMM_WORLD);
+            }
+            MPI_Send(grid[i+(n/p)+1], 100, MPI_DOUBLE, 1, i+(n/p)+1, MPI_COMM_WORLD); // send next
         }
-        
-        count_species_and_simulate(grid, n, specie_counter_aux, new_cells_state); // TODO: "new_cells_state" is unecessary
-
-        update_specie_counter(specie_counter, specie_counter_iter, specie_counter_aux, N_SPECIES, cur_gen);
     }
 
-    free_3d_array(new_cells_state, n);
-
-    // there is still the need to count species of last computed generation
-    int specie_counter_aux[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-    count_species(grid, n, specie_counter_aux);
-    update_specie_counter(specie_counter, specie_counter_iter, specie_counter_aux, N_SPECIES, n);
-    
-    int **result;
-    result = (int **) malloc (N_SPECIES * sizeof(int *));
-
-    for (int i = 0; i < N_SPECIES; i++){
-        result[i] = (int *) malloc (2 * sizeof(int));
-        result[i][0] = specie_counter[i];
-        result[i][1] = specie_counter_iter[i];     
-    }
-    
-    if (debug)
+    if (id != 0) // other nodes
     {
-        printf("Generation %d --------------\n", nGen);
-        showCube(grid, n);
+        int start_row = id * n/p;
+
+        MPI_Irecv(partial_grid[n-1], 100, MPI_DOUBLE, 1, n-1, MPI_COMM_WORLD, &request); // receive previous
+        for (int u = id; u < n/p; u++) // receive middle ones
+        {
+            MPI_Irecv(partial_grid[u], 100, MPI_DOUBLE, 1, u, MPI_COMM_WORLD, &request);
+        }
+
+        MPI_Irecv(partial_grid[id+(n/p)+1], 100, MPI_DOUBLE, 1, id+(n/p)+1, MPI_COMM_WORLD, &request); // receive next
     }
 
-    return result;
+    return 0;
 }
 
 int main(int argc, char *argv[]) 
@@ -265,8 +242,17 @@ int main(int argc, char *argv[])
     density = atof(argv[3]);
     seed =  atoi(argv[4]);
 
-    grid = gen_initial_grid(N, density, seed);
+    // MPI start
+    MPI_Init(&argc, &argv);
 
+    int id, p;
+
+    MPI_Comm_size(MPI_COMM_WORLD, &p);
+    MPI_Comm_rank(MPI_COMM_WORLD, &id);
+
+    grid = gen_initial_grid(N, density, seed, id, p);
+
+    /*
     int **result;
     result = (int **) malloc (N_SPECIES * sizeof(int *));
     
@@ -281,10 +267,11 @@ int main(int argc, char *argv[])
 
     exec_time += omp_get_wtime();
     fprintf(stderr, "%.1fs\n", exec_time);
-    deleteGrid(grid, N);
-    //free_3d_array((int***)grid, N); // TODO: for some reason, this doesnt work
+    */
+    MPI_Finalize();
+    //deleteGrid(grid, N);
 
-    print_result(result, N_SPECIES); // to the stdout!
+    //print_result(result, N_SPECIES); // to the stdout!
 
     return 0;
 }
