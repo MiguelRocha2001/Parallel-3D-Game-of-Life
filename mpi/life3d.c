@@ -187,6 +187,8 @@ int*** allocate_3d_array(int n) {
 */
 int **simulation(char *** grid, int nGen, int n, int debug)
 {
+
+    
     // used to count the number of each specie before new generation
     // idx == 0 means specie 1
     int specie_counter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
