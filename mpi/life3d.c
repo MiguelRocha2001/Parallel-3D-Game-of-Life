@@ -108,7 +108,7 @@ int evaluate_cell(char ***grid, int n, int x, int y, int z)
  * Counts the number of species of the current grid and then simulates
  * a new generation and updates the grid.
 */
-void simulate(char ***grid, int n, int number_of_rows, int ***new_cells_state)
+void count_species_and_simulate(char ***grid, int n, int number_of_rows, int ***new_cells_state, int* specie_counter)
 {
     // iterate through all cells and reduces the counter array
     //#pragma omp parallel for reduction(+:specie_counter[:N_SPECIES]) //collapse(3) 
@@ -118,7 +118,11 @@ void simulate(char ***grid, int n, int number_of_rows, int ***new_cells_state)
         {
             for(int z = 0; z < n; z++)
             {
-                // TODO: count species...
+                if (grid[x][y][z]) // if the cell is alive
+                {
+                    specie_counter[grid[x][y][z] - 1] += 1;
+                }
+                
                 new_cells_state[x][y][z] = evaluate_cell(grid, n, x, y, z);
             }
         }
@@ -205,15 +209,8 @@ int*** allocate_process_3d_array(int rows, int n)
     return array;
 }
 
-/**
- * Iterates and evaluates all grid cells 
-*/
-int **simulation(char *** grid, int nGen, int n, int debug)
+void send_updates(char *** grid, int n, int p, int id, int number_of_rows)
 {
-    int id, p;
-
-    MPI_Comm_size(MPI_COMM_WORLD, &p);
-    MPI_Comm_rank(MPI_COMM_WORLD, &id);
 
     int previous_process_id, next_process_id;
     
@@ -227,55 +224,6 @@ int **simulation(char *** grid, int nGen, int n, int debug)
     else
         next_process_id = id + 1;
 
-    /*
-
-    char *** partial_grid;
-    int rows_per_node = n/p;
-
-    if (id == 0) // root node
-    {
-        for (int i = 0; i < n; i += n/p)
-        {
-            MPI_Send(grid[n-1], 100, MPI_DOUBLE, 1, n-1, MPI_COMM_WORLD); // send previous
-            for (int u = i; u < n/p; u++) // send middle ones
-            {
-                MPI_Send(grid[u], 100, MPI_DOUBLE, 1, u, MPI_COMM_WORLD);
-            }
-            MPI_Send(grid[i+(n/p)+1], 100, MPI_DOUBLE, 1, i+(n/p)+1, MPI_COMM_WORLD); // send next
-        }
-    }
-
-    if (id != 0) // other nodes
-    {
-        int start_row = id * n/p;
-
-        MPI_Irecv(partial_grid[n-1], 100, MPI_DOUBLE, 1, n-1, MPI_COMM_WORLD, &request); // receive previous
-        for (int u = id; u < n/p; u++) // receive middle ones
-        {
-            MPI_Irecv(partial_grid[u], 100, MPI_DOUBLE, 1, u, MPI_COMM_WORLD, &request);
-        }
-
-        MPI_Irecv(partial_grid[id+(n/p)+1], 100, MPI_DOUBLE, 1, id+(n/p)+1, MPI_COMM_WORLD, &request); // receive next
-    }
-    */
-
-    int number_of_rows = n/p + 2;
-
-    /*
-    if (id == 0)
-        print_partial_cube(grid, number_of_rows, n);
-    */
-
-    int ***new_cells_state = allocate_process_3d_array(number_of_rows, n); // TODO: this creates 2 useless rows. Improve later
-
-    simulate(grid, n, number_of_rows, new_cells_state); // this will never modify new_cells_state first and last indexes/rows
-
-    /*
-    if (id == 0)
-        print_partial_cube(grid, number_of_rows, n);
-    */
-
-    // TODO: what if there is only one process! Deal with that later
 
     MPI_Request request;
     MPI_Status status;
@@ -291,7 +239,7 @@ int **simulation(char *** grid, int nGen, int n, int debug)
     */
 
     int sender_tag_1 = previous_process_id + 900;
-    int receiver_tag_1 = id + 900;
+    int receiver_tag_1 = id + 900; // 900 was just a random number so receiver_tag_1 doesnt colide with receiver_tag_2
 
     MPI_Send(grid[1][0], n*n, MPI_CHAR, previous_process_id, sender_tag_1, MPI_COMM_WORLD); // send first updated row to previous process
     MPI_Recv(grid[number_of_rows-1][0], n*n, MPI_CHAR, next_process_id, receiver_tag_1, MPI_COMM_WORLD, &status); // receive last utilitary row that was updated by next process
@@ -303,10 +251,85 @@ int **simulation(char *** grid, int nGen, int n, int debug)
     MPI_Send(grid[number_of_rows-2][0], n*n, MPI_CHAR, next_process_id, sender_tag_2, MPI_COMM_WORLD); // send last updated row to next process
     MPI_Recv(grid[0][0], n*n, MPI_CHAR, previous_process_id, receiver_tag_2, MPI_COMM_WORLD, &status); // receive first utilitary row that was updated by previous process
 
+    /*
+    if (id == 1)
+    {
+        printf("Process %d\n", id);
+        print_partial_cube(grid, number_of_rows, n);
+    }
+    */
+}
+
+/*
+void send_specie_counter(int* specie_counter)
+{
+    int root_node_id = 0;
+    int tag = 12345;
+    MPI_Send(specie_counter, N_SPECIES, MPI_INT, root_node_id, tag, MPI_COMM_WORLD); // send first updated row to previous process
+}
+*/
+
+/**
+ * Iterates and evaluates all grid cells 
+*/
+int **simulation(char *** grid, int nGen, int n, int debug)
+{
+    int id, p;
+
+    MPI_Comm_size(MPI_COMM_WORLD, &p);
+    MPI_Comm_rank(MPI_COMM_WORLD, &id);
+    /*
+    if (id == 0)
+        print_partial_cube(grid, number_of_rows, n);
+    */
+
+    int number_of_rows = n/p + 2; // TODO: number_of_rows depends on the process. Sometimes, if the planes are not equally devided by all processes, the last process will have more or less rows to compute.
+
+    int ***new_cells_state = allocate_process_3d_array(number_of_rows, n); // TODO: this creates 2 useless rows. Improve later
+
+    /*
+    if (id == 0)
+        print_partial_cube(grid, number_of_rows, n);
+    */
+
+    // TODO: what if there is only one process! Deal with that later
+
+    int total_specie_counter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int total_specie_counter_iter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; // Holds the iteration
+
+    for (int cur_gen = 0; cur_gen < nGen; cur_gen++)
+    {
+        int intance_specie_counter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+        count_species_and_simulate(grid, n, number_of_rows, new_cells_state, intance_specie_counter); // this will never modify new_cells_state first and last indexes/rows
+        send_updates(grid, n, p, id, number_of_rows);
+
+
+        int intance_specie_counter_reduce[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+        MPI_Reduce(intance_specie_counter, intance_specie_counter_reduce, N_SPECIES, MPI_INT,
+               MPI_SUM, 0, MPI_COMM_WORLD);
+
+        // deal with specie counter colected through reduce oper
+        if (id == 0)
+        {
+            update_specie_counter(total_specie_counter, total_specie_counter_iter, intance_specie_counter_reduce, N_SPECIES, cur_gen);
+        }
+    }
+
+    // root node prints specie counter final result
     if (id == 0)
     {
-        printf("Process 0\n");
-        print_partial_cube(grid, number_of_rows, n);
+        int **result;
+        result = (int **) malloc (N_SPECIES * sizeof(int *));
+        for (int i = 0; i < N_SPECIES; i++) 
+        {
+            result[i] = (int *) malloc (2 * sizeof(int));
+            result[i][0] = total_specie_counter[i];
+            result[i][1] = total_specie_counter_iter[i];     
+        }
+
+        print_result(result, N_SPECIES); // to the stdout!
     }
 
     return 0;
