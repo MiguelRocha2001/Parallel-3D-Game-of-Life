@@ -215,8 +215,19 @@ int **simulation(char *** grid, int nGen, int n, int debug)
     MPI_Comm_size(MPI_COMM_WORLD, &p);
     MPI_Comm_rank(MPI_COMM_WORLD, &id);
 
+    int previous_process_id, next_process_id;
+    
+    if (id == 0)
+        previous_process_id = p - 1;
+    else
+        previous_process_id = id - 1;
+    
+    if (id == p - 1)
+        next_process_id = 0;
+    else
+        next_process_id = id + 1;
+
     /*
-    MPI_Request request;
 
     char *** partial_grid;
     int rows_per_node = n/p;
@@ -248,17 +259,54 @@ int **simulation(char *** grid, int nGen, int n, int debug)
     }
     */
 
-   int number_of_rows = n/p + 2;
+    int number_of_rows = n/p + 2;
 
+    /*
     if (id == 0)
         print_partial_cube(grid, number_of_rows, n);
+    */
 
-   int ***new_cells_state = allocate_process_3d_array(number_of_rows, n); // TODO: this creates 2 useless rows. Improve later
+    int ***new_cells_state = allocate_process_3d_array(number_of_rows, n); // TODO: this creates 2 useless rows. Improve later
 
-   simulate(grid, n, number_of_rows, new_cells_state); // this will never modify new_cells_state first and last indexes/rows
+    simulate(grid, n, number_of_rows, new_cells_state); // this will never modify new_cells_state first and last indexes/rows
 
+    /*
     if (id == 0)
         print_partial_cube(grid, number_of_rows, n);
+    */
+
+    // TODO: what if there is only one process! Deal with that later
+
+    MPI_Request request;
+
+    //printf("P: %d; Previous process: %d\n", id, previous_process_id);
+
+    /*
+    if (id == 1)
+    {
+        printf("Process 1\n");
+        print_partial_cube(grid, number_of_rows, n);
+    }
+    */
+
+    int sender_tag_1 = previous_process_id + 900;
+    int receiver_tag_1 = id + 900;
+
+    MPI_Send(grid[1][0], n*n, MPI_CHAR, previous_process_id, sender_tag_1, MPI_COMM_WORLD); // send first updated row to previous process
+    MPI_Irecv(grid[number_of_rows-1][0], n*n, MPI_CHAR, next_process_id, receiver_tag_1, MPI_COMM_WORLD, &request); // receive last utilitary row that was updated by next process
+
+
+    int sender_tag_2 = next_process_id + 500;
+    int receiver_tag_2 = id + 500;
+
+    MPI_Send(grid[number_of_rows-2][0], n*n, MPI_CHAR, next_process_id, sender_tag_2, MPI_COMM_WORLD); // send last updated row to next process
+    MPI_Irecv(grid[0][0], n*n, MPI_CHAR, previous_process_id, receiver_tag_2, MPI_COMM_WORLD, &request); // receive first utilitary row that was updated by previous process
+
+    if (id == 0)
+    {
+        printf("Process 0\n");
+        print_partial_cube(grid, number_of_rows, n);
+    }
 
     return 0;
 }
