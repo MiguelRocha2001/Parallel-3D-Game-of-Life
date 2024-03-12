@@ -32,7 +32,7 @@ char ***gen_initial_grid(long long N, float density, int input_seed, int id, int
     
     int rows = N/p + 2;
 
-    printf("Process id: %d, Start row: %d; rows: %d\n", id, start_row, rows);
+    //printf("Process id: %d, Start row: %d; rows: %d\n", id, start_row, rows);
     
     grid = (char ***) malloc(rows * sizeof(char **));
     if(grid == NULL) {

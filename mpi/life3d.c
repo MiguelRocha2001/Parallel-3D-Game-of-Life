@@ -31,7 +31,8 @@ void get_neighbours(char ***grid, int n, int x, int y, int z, int* result)
 
     int prev_x, prev_y, prev_z;
     
-    prev_x = get_prev_coord(x, n);
+    //prev_x = get_prev_coord(x, n);
+    prev_x = x - 1; // in mpi implementation, previous plan is in grid[x - 1]
     prev_y = get_prev_coord(y, n);
     prev_z = get_prev_coord(z, n);
 
@@ -107,20 +108,23 @@ int evaluate_cell(char ***grid, int n, int x, int y, int z)
  * Counts the number of species of the current grid and then simulates
  * a new generation and updates the grid.
 */
-void count_species_and_simulate(char ***grid, int n, int start_row, int rows_to_evaluate, int end_row)
+void simulate(char ***grid, int n, int number_of_rows, int ***new_cells_state)
 {
     // iterate through all cells and reduces the counter array
     //#pragma omp parallel for reduction(+:specie_counter[:N_SPECIES]) //collapse(3) 
-    for (int x = start_row; x < rows_to_evaluate; x++)
+    for (int x = 1; x < number_of_rows - 1; x++) // skip first and last row because it is only utilitary
     {
         for(int y = 0; y < n; y++)
         {
             for(int z = 0; z < n; z++)
             {
-                evaluate_cell(grid, n, x, y, z);
+                // TODO: count species...
+                new_cells_state[x][y][z] = evaluate_cell(grid, n, x, y, z);
             }
         }
     }
+
+    apply_grid_updates(grid, n, new_cells_state, number_of_rows);
 }
 
 void count_species(char ***grid, int n, int* specie_counter)
@@ -172,16 +176,47 @@ int*** allocate_3d_array(int n) {
     return array;
 }
 
+
+int*** allocate_process_3d_array(int rows, int n)
+{
+    int *** array = (int ***) malloc(rows * sizeof(int **));
+    if(array == NULL) {
+        printf("Failed to allocate matrix\n");
+        exit(1);
+    }
+
+    for(int x = 0; x < rows; x++) {
+        array[x] = (int **) malloc(n * sizeof(int *));
+        if(array[x] == NULL) {
+            printf("Failed to allocate matrix\n");
+            exit(1);
+        }
+        array[x][0] = (int *) calloc(n * n, sizeof(int));
+        if(array[x][0] == NULL) {
+            printf("Failed to allocate matrix\n");
+            exit(1);
+        }
+
+        #pragma omp parallel for
+        for (int y = 1; y < n; y++)
+            array[x][y] = array[x][0] + y * n;
+    }
+
+    return array;
+}
+
 /**
  * Iterates and evaluates all grid cells 
 */
 int **simulation(char *** grid, int nGen, int n, int debug)
 {
-    MPI_Request request;
     int id, p;
 
     MPI_Comm_size(MPI_COMM_WORLD, &p);
     MPI_Comm_rank(MPI_COMM_WORLD, &id);
+
+    /*
+    MPI_Request request;
 
     char *** partial_grid;
     int rows_per_node = n/p;
@@ -211,6 +246,19 @@ int **simulation(char *** grid, int nGen, int n, int debug)
 
         MPI_Irecv(partial_grid[id+(n/p)+1], 100, MPI_DOUBLE, 1, id+(n/p)+1, MPI_COMM_WORLD, &request); // receive next
     }
+    */
+
+   int number_of_rows = n/p + 2;
+
+    if (id == 0)
+        print_partial_cube(grid, number_of_rows, n);
+
+   int ***new_cells_state = allocate_process_3d_array(number_of_rows, n); // TODO: this creates 2 useless rows. Improve later
+
+   simulate(grid, n, number_of_rows, new_cells_state); // this will never modify new_cells_state first and last indexes/rows
+
+    if (id == 0)
+        print_partial_cube(grid, number_of_rows, n);
 
     return 0;
 }
@@ -258,8 +306,7 @@ int main(int argc, char *argv[])
         print_partial_cube(grid, rows, N);
     */
     
-
-    /*
+   /*
     int **result;
     result = (int **) malloc (N_SPECIES * sizeof(int *));
     
@@ -267,18 +314,19 @@ int main(int argc, char *argv[])
     for (int i = 0; i < N_SPECIES; i++){
         result[i] = (int *) malloc (2 * sizeof(int));
     }
+    */
     
     exec_time = -omp_get_wtime();
 
-    result = simulation(grid, nGen, N, debug);
+    simulation(grid, nGen, N, debug);
 
     exec_time += omp_get_wtime();
     fprintf(stderr, "%.1fs\n", exec_time);
-    */
-    MPI_Finalize();
     //deleteGrid(grid, N);
 
     //print_result(result, N_SPECIES); // to the stdout!
+
+    MPI_Finalize();
 
     return 0;
 }

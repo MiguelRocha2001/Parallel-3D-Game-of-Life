@@ -62,11 +62,11 @@ int get_next_coord(int coord, int n)
 // But we dont need it. Because all iterations do the same work (should take the same amout of time). 
 //Actually, with colapse, I think we have overhead because the threads will have cache misses, since they wont 
 // access consequtive memory addresses. What do you think?*
-void apply_grid_updates(char *** grid, int n, int ***new_cells_state)
+void apply_grid_updates(char *** grid, int n, int ***new_cells_state, int number_of_rows)
 {
     // iterate through all cells
     #pragma omp parallel for //collapse(3)
-    for (int x = 0; x < n; x++)
+    for (int x = 1; x < number_of_rows - 1; x++) // skip first and last row because it is only utilitary
     {
         for(int y = 0; y < n; y++)
         {
