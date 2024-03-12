@@ -278,6 +278,7 @@ int **simulation(char *** grid, int nGen, int n, int debug)
     // TODO: what if there is only one process! Deal with that later
 
     MPI_Request request;
+    MPI_Status status;
 
     //printf("P: %d; Previous process: %d\n", id, previous_process_id);
 
@@ -293,14 +294,14 @@ int **simulation(char *** grid, int nGen, int n, int debug)
     int receiver_tag_1 = id + 900;
 
     MPI_Send(grid[1][0], n*n, MPI_CHAR, previous_process_id, sender_tag_1, MPI_COMM_WORLD); // send first updated row to previous process
-    MPI_Irecv(grid[number_of_rows-1][0], n*n, MPI_CHAR, next_process_id, receiver_tag_1, MPI_COMM_WORLD, &request); // receive last utilitary row that was updated by next process
+    MPI_Recv(grid[number_of_rows-1][0], n*n, MPI_CHAR, next_process_id, receiver_tag_1, MPI_COMM_WORLD, &status); // receive last utilitary row that was updated by next process
 
 
     int sender_tag_2 = next_process_id + 500;
     int receiver_tag_2 = id + 500;
 
     MPI_Send(grid[number_of_rows-2][0], n*n, MPI_CHAR, next_process_id, sender_tag_2, MPI_COMM_WORLD); // send last updated row to next process
-    MPI_Irecv(grid[0][0], n*n, MPI_CHAR, previous_process_id, receiver_tag_2, MPI_COMM_WORLD, &request); // receive first utilitary row that was updated by previous process
+    MPI_Recv(grid[0][0], n*n, MPI_CHAR, previous_process_id, receiver_tag_2, MPI_COMM_WORLD, &status); // receive first utilitary row that was updated by previous process
 
     if (id == 0)
     {
