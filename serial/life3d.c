@@ -179,8 +179,6 @@ int **simulation(char *** grid, int nGen, int n, int debug)
     int specie_counter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
     int specie_counter_iter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; // Holds the iteration 
 
-    count_species(grid, n, specie_counter);
-
     int ***new_cells_state = allocate_3d_array(n);
 
     for (int cur_gen = 0; cur_gen < nGen; cur_gen++)
@@ -201,14 +199,15 @@ int **simulation(char *** grid, int nGen, int n, int debug)
     // this is because there is still need to count species of last computed generation
     int specie_counter_aux[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
     count_species(grid, n, specie_counter_aux);
-    update_specie_counter(specie_counter, specie_counter_iter, specie_counter_aux, N_SPECIES, n);
+    update_specie_counter(specie_counter, specie_counter_iter, specie_counter_aux, N_SPECIES, nGen);
     
     int **result;
     result = (int **) malloc (N_SPECIES * sizeof(int *));
-    for (int i = 0; i < N_SPECIES; i++){
+    for (int i = 0; i < N_SPECIES; i++)
+    {
         result[i] = (int *) malloc (2 * sizeof(int));
         result[i][0] = specie_counter[i];
-        result[i][1] = specie_counter_iter[i];     
+        result[i][1] = specie_counter_iter[i];
     }
     
 
@@ -246,14 +245,9 @@ int main(int argc, char *argv[])
 
     grid = gen_initial_grid(N, density, seed);
 
-    int **result;
-    result = (int **) malloc (N_SPECIES * sizeof(int *));
-    for (int i = 0; i < N_SPECIES; i++){
-        result[i] = (int *) malloc (2 * sizeof(int));
-    }
-    
     exec_time = -omp_get_wtime();
 
+    int **result;
     result = simulation(grid, nGen, N, debug);
 
     exec_time += omp_get_wtime();

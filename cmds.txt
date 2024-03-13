@@ -6,6 +6,8 @@ For tests:
     $ ./life3d.o 200 128 .5 1000
     $ ./life3d.o 10 512 .4 0
     $ ./life3d.o 3 1024 .4 100
+    
+    $ ./life3d.o 5 400 .25 0
 
 Debug with gdb:
     $ gdb life3d.o
