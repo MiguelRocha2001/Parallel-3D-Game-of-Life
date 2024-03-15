@@ -45,8 +45,7 @@ char ***gen_initial_grid(long long N, float density, int input_seed)
             exit(1);
         }
 
-        #pragma omp parallel for
-        for (y = 1; y < N; y++)
+        for (int y = 1; y < N; y++)
             grid[x][y] = grid[x][0] + y * N;
     }
 

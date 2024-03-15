@@ -95,7 +95,6 @@ int evaluate_cell(char ***grid, int n, int x, int y, int z)
         }
         else // should not change
         {
-            //return grid[x][y][z];
             return -1;
         }
     }
@@ -125,11 +124,6 @@ void count_species_and_simulate(char ***grid, int n, int* specie_counter, int **
         }
     }
 
-    /*
-    char ***temp_grid_pointer = grid;
-    grid = new_cells_state;
-    new_cells_state = temp_grid_pointer;
-    */
     apply_grid_updates(grid, n, new_cells_state);
 }
 

@@ -88,7 +88,6 @@ int evaluate_cell(char ***grid, int n, int x, int y, int z)
 
     if (should_live(is_alive, neighbours[0]))
     {
-        //printf("%d", neighbours[1]);
         if (!is_alive)
         {
             return neighbours[1];
