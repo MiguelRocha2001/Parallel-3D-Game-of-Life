@@ -111,7 +111,7 @@ int evaluate_cell(char ***grid, int n, int x, int y, int z)
 void count_species_and_simulate(char ***grid, int n, int number_of_rows, int ***new_cells_state, int* specie_counter)
 {
     // iterate through all cells and reduces the counter array
-    //#pragma omp parallel for reduction(+:specie_counter[:N_SPECIES]) //collapse(3) 
+    #pragma omp parallel for reduction(+:specie_counter[:N_SPECIES]) //collapse(3) 
     for (int x = 1; x < number_of_rows - 1; x++) // skip first and last row because it is only utilitary
     {
         for(int y = 0; y < n; y++)
@@ -134,7 +134,7 @@ void count_species_and_simulate(char ***grid, int n, int number_of_rows, int ***
 void count_species(char ***grid, int n, int number_of_rows, int* specie_counter)
 {
     // iterate through all cells
-    //#pragma omp parallel for reduction(+:specie_counter[:N_SPECIES]) //collapse(3) dont use colapse for the same reason as apply_grid_updates() function
+    #pragma omp parallel for reduction(+:specie_counter[:N_SPECIES]) //collapse(3) dont use colapse for the same reason as apply_grid_updates() function
     for (int x = 1; x < number_of_rows - 1; x++) // skip first and last row because it is only utilitary
     {
         for(int y = 0; y < n; y++)
