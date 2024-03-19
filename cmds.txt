@@ -1,13 +1,13 @@
 For debug:
-    $ ./life3d.o 4 4 .4 100 d
+    $ ./life3d 4 4 .4 100 d
 
 For tests:
-    $ ./life3d.o 1000 64 0.4 0
-    $ ./life3d.o 200 128 .5 1000
-    $ ./life3d.o 10 512 .4 0
-    $ ./life3d.o 3 1024 .4 100
+    $ ./life3d 1000 64 0.4 0
+    $ ./life3d 200 128 .5 1000
+    $ ./life3d 10 512 .4 0
+    $ ./life3d 3 1024 .4 100
     
-    $ ./life3d.o 5 400 .25 0
+    $ ./life3d 5 400 .25 0
 
 Debug with gdb:
     $ gdb life3d.o

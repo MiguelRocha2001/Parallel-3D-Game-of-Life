@@ -5,6 +5,8 @@
 
 unsigned int seed;
 
+#define min(a, b) ((a) < (b) ? (a) : (b))
+
 void init_r4uni(int input_seed)
 {
     seed = input_seed + 987654321;
@@ -26,13 +28,17 @@ char ***gen_initial_grid(long long N, float density, int input_seed, int id, int
     int x, y, z;
     char *** grid;
 
-    int start_row = id * N/p - 1;
+    int start_row = id * N/p + min(id, N % p) - 1;
     if (id == 0)
         start_row = N - 1;
+
+    //int last_row = (id+1) * N/p + min(id+1, N % p);
     
     int rows = N/p + 2;
+    if (id < N % p)
+        rows++;
 
-    //printf("Process id: %d, Start row: %d; rows: %d\n", id, start_row, rows);
+    //printf("ID: %d, Start Row: %d; Rows: %d\n", id, start_row, rows);
     
     grid = (char ***) malloc(rows * sizeof(char **));
     if(grid == NULL) {
@@ -52,7 +58,6 @@ char ***gen_initial_grid(long long N, float density, int input_seed, int id, int
             exit(1);
         }
 
-        #pragma omp parallel for
         for (y = 1; y < N; y++)
             grid[x][y] = grid[x][0] + y * N;
     }
@@ -69,7 +74,7 @@ char ***gen_initial_grid(long long N, float density, int input_seed, int id, int
                     if (id != 0 && id != p-1)
                     {
                         if (x >= start_row && x < start_row + rows)
-                        grid[x - start_row][y][z] = value;
+                            grid[x - start_row][y][z] = value;
                     }
                     
                     else if (id == 0)
