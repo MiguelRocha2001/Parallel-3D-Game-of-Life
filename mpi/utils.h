@@ -11,7 +11,7 @@ int get_next_coord(int coord, int n);
 /**
  * Changes grid cells based on @var new_cells_state.
 */
-void apply_grid_updates(char *** grid, int n, int ***new_cells_state, int number_of_rows);
+void apply_grid_updates(char *** grid, int n, char ***new_cells_state, int number_of_rows);
 
 void update_specie_counter(
     int *specie_counter, 
