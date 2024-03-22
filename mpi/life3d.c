@@ -189,7 +189,6 @@ void update_and_send_first_row(char ***grid, int n, int number_of_rows, char ***
             {
                 specie_counter[grid[x][y][z] - 1] += 1;
             }
-            
             new_cells_state[x][y][z] = evaluate_cell(grid, n, x, y, z);
         }
     }
@@ -199,8 +198,8 @@ void update_and_send_first_row(char ***grid, int n, int number_of_rows, char ***
 /**
  * Computes last row and sends assyncronously it's result.
 */
-void update_and_send_last_row(char ***grid, int n, int number_of_rows, char ***new_cells_state, int* specie_counter, int id, int p) {
-
+void update_and_send_last_row(char ***grid, int n, int number_of_rows, char ***new_cells_state, int* specie_counter, int id, int p, int count_species) 
+{
     int next_process_id;
     if (id == p - 1)
         next_process_id = 0;
@@ -216,11 +215,10 @@ void update_and_send_last_row(char ***grid, int n, int number_of_rows, char ***n
     {
         for(int z = 0; z < n; z++)
         {
-            if (grid[x][y][z]) // if the cell is alive
+            if (count_species &&  grid[x][y][z])
             {
                 specie_counter[grid[x][y][z] - 1] += 1;
             }
-            
             new_cells_state[x][y][z] = evaluate_cell(grid, n, x, y, z);
         }
     }
@@ -230,10 +228,10 @@ void update_and_send_last_row(char ***grid, int n, int number_of_rows, char ***n
 /**
  * Computes last row and sends assyncronously it's result.
 */
-void update_middle_rows(char ***grid, int n, int number_of_rows, char ***new_cells_state, int* specie_counter) {
-    
+void update_middle_rows(char ***grid, int n, int number_of_rows, char ***new_cells_state, int* specie_counter) 
+{    
     // iterate through all cells and reduces the counter array
-    #pragma omp parallel for reduction(+:specie_counter[:N_SPECIES]) //collapse(3) 
+    #pragma omp parallel for reduction(+:specie_counter[:N_SPECIES])
     for (int x = 2; x < number_of_rows - 2; x++) // skip first and last row because it is only utilitary
     {
         for(int y = 0; y < n; y++)
@@ -290,26 +288,29 @@ void count_species_and_simulate(char ***grid, int n, int number_of_rows, char **
     MPI_Request requests[2];
     MPI_Status statuses[2];
 
+    int number_of_rows_to_update = number_of_rows - 2;
+
     set_row_receivers(first_row, last_row, requests, id, p, n, number_of_rows);
 
-    update_and_send_first_row(grid, n, number_of_rows, new_cells_state, specie_counter, id, p);
-    update_and_send_last_row(grid, n, number_of_rows, new_cells_state, specie_counter, id, p);
-    update_middle_rows(grid, n, number_of_rows, new_cells_state, specie_counter);
+    update_and_send_first_row(grid, n, number_of_rows, new_cells_state, specie_counter, id, p);    
+    
+    int count_species = number_of_rows_to_update > 1;
+    update_and_send_last_row(grid, n, number_of_rows, new_cells_state, specie_counter, id, p, count_species);
+    
+    if (number_of_rows_to_update > 2)
+        update_middle_rows(grid, n, number_of_rows, new_cells_state, specie_counter);
 
     apply_grid_updates(grid, n, new_cells_state, number_of_rows);
 
     MPI_Waitall(2, requests, statuses);
 
     apply_received_updates(grid, first_row, last_row, n, number_of_rows);
-
-    if (id == 0)
-        print_partial_cube(grid, number_of_rows, n);
 }
 
 void count_species(char ***grid, int n, int number_of_rows, int* specie_counter)
 {
     // iterate through all cells
-    #pragma omp parallel for reduction(+:specie_counter[:N_SPECIES]) //collapse(3) dont use colapse for the same reason as apply_grid_updates() function
+    #pragma omp parallel for reduction(+:specie_counter[:N_SPECIES])
     for (int x = 1; x < number_of_rows - 1; x++) // skip first and last row because it is only utilitary
     {
         for(int y = 0; y < n; y++)
@@ -325,39 +326,6 @@ void count_species(char ***grid, int n, int number_of_rows, int* specie_counter)
     }
 }
 
-void send_updates(char *** grid, int n, int p, int id, int number_of_rows)
-{
-    int previous_process_id, next_process_id;
-    
-    if (id == 0)
-        previous_process_id = p - 1;
-    else
-        previous_process_id = id - 1;
-    
-    if (id == p - 1)
-        next_process_id = 0;
-    else
-        next_process_id = id + 1;
-
-
-    MPI_Request requests[4];
-    MPI_Status statuses[4];
-
-    int sender_tag_1 = previous_process_id + 900;
-    int receiver_tag_1 = id + 900; // 900 was just a random number so receiver_tag_1 doesnt colide with receiver_tag_2
-
-    int sender_tag_2 = next_process_id + 500;
-    int receiver_tag_2 = id + 500;
-
-    MPI_Irecv(grid[number_of_rows-1][0], n*n, MPI_CHAR, next_process_id, receiver_tag_1, MPI_COMM_WORLD, &requests[0]); // receive last utilitary row that was updated by next process
-    MPI_Irecv(grid[0][0], n*n, MPI_CHAR, previous_process_id, receiver_tag_2, MPI_COMM_WORLD, &requests[1]); // receive first utilitary row that was updated by previous process
-
-    MPI_Isend(grid[1][0], n*n, MPI_CHAR, previous_process_id, sender_tag_1, MPI_COMM_WORLD, &requests[2]); // send first updated row to previous process
-    MPI_Isend(grid[number_of_rows-2][0], n*n, MPI_CHAR, next_process_id, sender_tag_2, MPI_COMM_WORLD, &requests[3]); // send last updated row to next process
-    
-    MPI_Waitall(2, requests, statuses);
-}
-
 void update_specie_counter_aux(int* intance_specie_counter, int* total_specie_counter, int* total_specie_counter_iter, int id, int p, int cur_gen)
 {
     int intance_specie_counter_reduce[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -365,7 +333,7 @@ void update_specie_counter_aux(int* intance_specie_counter, int* total_specie_co
     MPI_Reduce(intance_specie_counter, intance_specie_counter_reduce, N_SPECIES, MPI_INT,
             MPI_SUM, p-1, MPI_COMM_WORLD);
 
-    // deal with specie counter colected through reduce oper
+    // Deals with specie counter colected through reduce operation
     if (id == p-1)
     {
         update_specie_counter(total_specie_counter, total_specie_counter_iter, intance_specie_counter_reduce, N_SPECIES, cur_gen);
@@ -388,11 +356,6 @@ int **simulation(char *** grid, int nGen, int n, int debug)
 
     char ***new_cells_state = allocate_process_3d_array(number_of_rows, n); // TODO: this creates 2 useless rows. Improve later
 
-    /*
-    if (id == 0)
-        print_partial_cube(grid, number_of_rows, n);
-    */
-
     // TODO: what if there is only one process! Deal with that later
 
     int total_specie_counter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -403,18 +366,11 @@ int **simulation(char *** grid, int nGen, int n, int debug)
         int intance_specie_counter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
         count_species_and_simulate(grid, n, number_of_rows, new_cells_state, intance_specie_counter, id, p); // this will never modify new_cells_state first and last indexes/rows
-        //send_updates(grid, n, p, id, number_of_rows);
-
-        /*
-        if (id == 0)
-        {
-            printf("Process %d\n", id);
-            print_partial_cube(grid, number_of_rows, n);
-        }
-        */
-
-       update_specie_counter_aux(intance_specie_counter, total_specie_counter, total_specie_counter_iter, id, p, cur_gen);
+        update_specie_counter_aux(intance_specie_counter, total_specie_counter, total_specie_counter_iter, id, p, cur_gen);
     }
+
+    if (id == 0)
+        print_partial_cube(grid, number_of_rows, n);
 
     int intance_specie_counter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
     count_species(grid, n, number_of_rows, intance_specie_counter);
@@ -441,21 +397,6 @@ int **simulation(char *** grid, int nGen, int n, int debug)
 
 int main(int argc, char *argv[]) 
 {
-    /*
-    // Name of the environment variable you want to retrieve
-    const char* env_var_name = "OMP_NUM_THREADS";
-
-    // Retrieve the value of the environment variable
-    char* env_var_value = getenv(env_var_name);
-
-    if (env_var_value != NULL) {
-        printf("Value of %s is: %s\n", env_var_name, env_var_value);
-    } else {
-        printf("Environment variable %s is not set\n", env_var_name);
-    }
-    */
-
-
     int nGen, N, seed;
     float density;
     char ***grid;
