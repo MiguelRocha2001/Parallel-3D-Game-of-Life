@@ -1,3 +1,0 @@
-- Slice cube into p slices/planes: slice one coordinate into p processes.
-- Root (0) node will hold global counter of species. Each node will count its set of species and reduce it on root.
-- Use OpenMP to paralelize each process like in 2º assignment.
