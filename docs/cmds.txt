@@ -20,5 +20,8 @@ ssh:
     $ cd $CLUSTER_HOME
 
 mpi:
-    $ mpicc -O2 -fopenmp -g -o life3d life3d.c utils.c
-    $ mpirun -n 4 life3d 4 4 .4 100 d
+    host:
+        $ mpicc -O2 -fopenmp -g -o life3d life3d.c utils.c
+        $ mpirun -n 4 life3d 4 4 .4 100 d
+    lab:
+        $ mpirun -host lab1p8,lab1p10 life3d 4 4 .4 100 d

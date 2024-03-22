@@ -221,7 +221,7 @@ void update_and_send_last_row(char ***grid, int n, int number_of_rows, char ***n
                 specie_counter[grid[x][y][z] - 1] += 1;
             }
             
-            new_cells_state[x][y][z] = 1;
+            new_cells_state[x][y][z] = evaluate_cell(grid, n, x, y, z);
         }
     }
     MPI_Isend(new_cells_state[number_of_rows-2][0], n*n, MPI_CHAR, next_process_id, sender_tag_2, MPI_COMM_WORLD, &request); // send last updated row to next process
@@ -302,10 +302,8 @@ void count_species_and_simulate(char ***grid, int n, int number_of_rows, char **
 
     apply_received_updates(grid, first_row, last_row, n, number_of_rows);
 
-    /*
     if (id == 0)
         print_partial_cube(grid, number_of_rows, n);
-    */
 }
 
 void count_species(char ***grid, int n, int number_of_rows, int* specie_counter)
