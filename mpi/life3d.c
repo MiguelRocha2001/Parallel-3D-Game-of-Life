@@ -5,36 +5,6 @@
 #include <string.h>
 #include <mpi.h>
 
-int*** allocate_3d_array(int n) {
-    int *** array = (int ***)malloc(n * sizeof(int **));
-    if (array == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        exit(1);
-    }
-
-    #pragma parallel omp for
-    for (int i = 0; i < n; i++) 
-    {
-        (array)[i] = (int **)malloc(n * sizeof(int *));
-        if ((array)[i] == NULL) {
-            fprintf(stderr, "Memory allocation failed\n");
-            exit(1);
-        }
-        
-        #pragma omp for
-        for (int j = 0; j < n; j++) 
-        {
-            (array)[i][j] = (int *)malloc(n * sizeof(int));
-            if ((array)[i][j] == NULL) {
-                fprintf(stderr, "Memory allocation failed\n");
-                exit(1);
-            }
-        }
-    }
-
-    return array;
-}
-
 
 char*** allocate_process_3d_array(int rows, int n)
 {
@@ -44,7 +14,7 @@ char*** allocate_process_3d_array(int rows, int n)
         exit(1);
     }
 
-    for(char x = 0; x < rows; x++) {
+    for(int x = 0; x < rows; x++) {
         array[x] = (char **) malloc(n * sizeof(char *));
         if(array[x] == NULL) {
             printf("Failed to allocate matrix\n");
@@ -56,9 +26,10 @@ char*** allocate_process_3d_array(int rows, int n)
             exit(1);
         }
 
-        #pragma omp parallel for
-        for (char y = 1; y < n; y++)
+        for (int y = 1; y < n; y++)
+        {
             array[x][y] = array[x][0] + y * n;
+        }
     }
 
     return array;
@@ -180,19 +151,20 @@ void update_and_send_first_row(char ***grid, int n, int number_of_rows, char ***
 
     int sender_tag_1 = previous_process_id + 900;
 
-    int x = 1;
+    int first_row = 1;
+    #pragma omp parallel for reduction(+:specie_counter[:N_SPECIES])
     for(int y = 0; y < n; y++)
     {
         for(int z = 0; z < n; z++)
         {
-            if (grid[x][y][z]) // if the cell is alive
+            if (grid[first_row][y][z]) // if the cell is alive
             {
-                specie_counter[grid[x][y][z] - 1] += 1;
+                specie_counter[grid[first_row][y][z] - 1] += 1;
             }
-            new_cells_state[x][y][z] = evaluate_cell(grid, n, x, y, z);
+            new_cells_state[first_row][y][z] = evaluate_cell(grid, n, first_row, y, z);
         }
     }
-    MPI_Isend(new_cells_state[1][0], n*n, MPI_CHAR, previous_process_id, sender_tag_1, MPI_COMM_WORLD, &request); // send first updated row to previous process
+    MPI_Isend(new_cells_state[first_row][0], n*n, MPI_CHAR, previous_process_id, sender_tag_1, MPI_COMM_WORLD, &request); // send first updated row to previous process
 }
 
 /**
@@ -210,19 +182,20 @@ void update_and_send_last_row(char ***grid, int n, int number_of_rows, char ***n
 
     int sender_tag_2 = next_process_id + 500;
 
-    int x = number_of_rows - 2;
+    int last_row = number_of_rows - 2;
+    #pragma omp parallel for reduction(+:specie_counter[:N_SPECIES])
     for(int y = 0; y < n; y++)
     {
         for(int z = 0; z < n; z++)
         {
-            if (count_species &&  grid[x][y][z])
+            if (count_species && grid[last_row][y][z])
             {
-                specie_counter[grid[x][y][z] - 1] += 1;
+                specie_counter[grid[last_row][y][z] - 1] += 1;
             }
-            new_cells_state[x][y][z] = evaluate_cell(grid, n, x, y, z);
+            new_cells_state[last_row][y][z] = evaluate_cell(grid, n, last_row, y, z);
         }
     }
-    MPI_Isend(new_cells_state[number_of_rows-2][0], n*n, MPI_CHAR, next_process_id, sender_tag_2, MPI_COMM_WORLD, &request); // send last updated row to next process
+    MPI_Isend(new_cells_state[last_row][0], n*n, MPI_CHAR, next_process_id, sender_tag_2, MPI_COMM_WORLD, &request); // send last updated row to next process
 }
 
 /**
@@ -282,8 +255,16 @@ void apply_received_updates(char ***grid, char *first_row, char *last_row, int n
 */
 void count_species_and_simulate(char ***grid, int n, int number_of_rows, char ***new_cells_state, int* specie_counter, int id, int p)
 {
-    char first_row[n * n * sizeof(char)];
-    char last_row[n * n * sizeof(char)];
+    char *first_row = (char *)malloc(n * n * sizeof(char));
+    if (first_row == NULL) {
+        // Handle error: memory allocation failed
+        exit(EXIT_FAILURE);
+    }
+    char *last_row = (char *)malloc(n * n * sizeof(char));
+    if (last_row == NULL) {
+        // Handle error: memory allocation failed
+        exit(EXIT_FAILURE);
+    }
 
     MPI_Request requests[2];
     MPI_Status statuses[2];
@@ -305,6 +286,9 @@ void count_species_and_simulate(char ***grid, int n, int number_of_rows, char **
     MPI_Waitall(2, requests, statuses);
 
     apply_received_updates(grid, first_row, last_row, n, number_of_rows);
+
+    free(first_row);
+    free(last_row);
 }
 
 void count_species(char ***grid, int n, int number_of_rows, int* specie_counter)
@@ -355,7 +339,7 @@ int **simulation(char *** grid, int nGen, int n, int debug)
         number_of_rows++;
 
     char ***new_cells_state = allocate_process_3d_array(number_of_rows, n); // TODO: this creates 2 useless rows. Improve later
-
+    
     // TODO: what if there is only one process! Deal with that later
 
     int total_specie_counter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -367,10 +351,14 @@ int **simulation(char *** grid, int nGen, int n, int debug)
 
         count_species_and_simulate(grid, n, number_of_rows, new_cells_state, intance_specie_counter, id, p); // this will never modify new_cells_state first and last indexes/rows
         update_specie_counter_aux(intance_specie_counter, total_specie_counter, total_specie_counter_iter, id, p, cur_gen);
+
+        MPI_Barrier(MPI_COMM_WORLD); // TODO: IDU why is this needed
     }
 
+    /*
     if (id == 0)
         print_partial_cube(grid, number_of_rows, n);
+    */
 
     int intance_specie_counter[N_SPECIES] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
     count_species(grid, n, number_of_rows, intance_specie_counter);

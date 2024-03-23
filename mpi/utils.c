@@ -65,7 +65,7 @@ int get_next_coord(int coord, int n)
 void apply_grid_updates(char *** grid, int n, char ***new_cells_state, int number_of_rows)
 {
     // iterate through all cells
-    #pragma omp parallel for //collapse(3)
+    #pragma omp parallel for
     for (int x = 1; x < number_of_rows - 1; x++) // skip first and last row because it is only utilitary
     {
         for(int y = 0; y < n; y++)
