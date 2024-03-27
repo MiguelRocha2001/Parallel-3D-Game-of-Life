@@ -34,7 +34,7 @@ void print_partial_cube(char *** grid, int rows, int n)
 {
     for (int x = 0; x < rows; x++)
     {
-        printf("Layer %d:\n", x);
+        printf("Row %d:\n", x);
         for(int y = 0; y < n; y++)
         {
             for(int z = 0; z < n; z++)
@@ -73,12 +73,6 @@ void apply_grid_updates(char *** grid, int n, char ***new_cells_state, int numbe
             for(int z = 0; z < n; z++)
             {
                 grid[x][y][z] = new_cells_state[x][y][z];
-                /*
-                if (new_cells_state[x][y][z] != -1) // -1 means no change
-                {
-                    grid[x][y][z] = new_cells_state[x][y][z];
-                }
-                */
             }
         }
     }
