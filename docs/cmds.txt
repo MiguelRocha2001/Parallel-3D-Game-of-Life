@@ -21,7 +21,12 @@ ssh:
 
 mpi:
     host:
-        $ mpicc -O2 -fopenmp -g -o life3d life3d.c utils.c
-        $ mpirun -n 4 life3d 4 4 .4 100 d
+        $ mpicc -O2 -fopenmp -g -o life3d-mpi life3d.c utils.c
+        $ mpirun -n 4 life3d-mpi 4 4 .4 100 d
     lab:
         $ mpirun -host lab1p8,lab1p10 life3d 4 4 .4 100 d
+    
+    SLURM:
+        $ sbatch slurm.sh
+        $ scancel <job number>
+        $ srun -n 64 --cpus-per-task=4 life3d 1000 64 0.4 0
